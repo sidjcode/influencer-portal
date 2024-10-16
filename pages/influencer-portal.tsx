@@ -23,14 +23,51 @@ interface DealData {
     postDate: Date;
 }
 
+interface Influencer {
+    id: string;
+    channelName: string;
+    category: string;
+    trackingUrl: string;
+}
+
+interface Deal {
+    id: string;
+    influencer: Influencer;
+    contractedBy: 'DIRECT' | 'AGENCY';
+    pricingType: 'FIXED' | 'CPM';
+    fixedCost?: number;
+    cpm?: number;
+    priceCeiling?: number;
+    viewGuarantee?: number;
+    viewGuaranteeDays?: number;
+    postDate: string;
+    videos: Array<{
+        id: string;
+        title: string;
+        views: number;
+        likes: number;
+        comments: number;
+    }>;
+}
+
+interface CurrentMonthData {
+    postedInfluencers: number;
+    totalViews: number;
+    totalClicks: number;
+    totalConversions: number;
+    roi: number;
+    cost: number;
+    agencyFee: number;
+}
+
 export default function InfluencerPortal() {
     const [activeTab, setActiveTab] = useState("dashboard")
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const [currentDate, setCurrentDate] = useState(new Date())
-    const [influencers, setInfluencers] = useState([])
-    const [deals, setDeals] = useState([])
-    const [currentMonthData, setCurrentMonthData] = useState({
+    const [influencers, setInfluencers] = useState<Influencer[]>([])
+    const [deals, setDeals] = useState<Deal[]>([])
+    const [currentMonthData, setCurrentMonthData] = useState<CurrentMonthData>({
         postedInfluencers: 0,
         totalViews: 0,
         totalClicks: 0,
@@ -88,9 +125,9 @@ export default function InfluencerPortal() {
         influencer.category.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const getInfluencerVideos = (influencerId: number) => {
+    const getInfluencerVideos = (influencerId: string) => {
         return deals
-            .filter(deal => deal.influencerId === influencerId)
+            .filter(deal => deal.influencer.id === influencerId)
             .flatMap(deal => deal.videos)
     }
 
@@ -299,7 +336,7 @@ export default function InfluencerPortal() {
                                                                 View Details
                                                             </Button>
                                                         </DialogTrigger>
-                                                        <DialogContent className="max-w-4xl">
+                                                        <DialogContent  className="max-w-4xl">
                                                             <DialogHeader>
                                                                 <DialogTitle>{influencer.channelName} - Performance Details</DialogTitle>
                                                                 <DialogDescription>
@@ -331,7 +368,6 @@ export default function InfluencerPortal() {
                                                                                     </TableRow>
                                                                                 ))}
                                                                             </TableBody>
-
                                                                         </Table>
                                                                     </CardContent>
                                                                 </Card>
