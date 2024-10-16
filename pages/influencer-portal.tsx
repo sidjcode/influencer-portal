@@ -237,6 +237,13 @@ export default function InfluencerPortal() {
                         Add Influencer
                     </Button>
                     <Button
+                        variant={activeTab === "update" ? "default" : "outline"}
+                        onClick={() => setActiveTab("update")}
+                    >
+                        <Users className="mr-2 h-4 w-4" />
+                        Update Influencer
+                    </Button>
+                    <Button
                         variant={activeTab === "addDeal" ? "default" : "outline"}
                         onClick={() => setActiveTab("addDeal")}
                     >
