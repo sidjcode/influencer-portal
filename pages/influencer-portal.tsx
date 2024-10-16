@@ -4,43 +4,47 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
+import { Checkbox } from "@/components/ui/checkbox"
 import { BarChart, Users, UserPlus, Search, DollarSign, Percent, MousePointer, ShoppingCart, CalendarDays, Video, ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DealForm } from "@/components/ui/deal-form"
 import axios from 'axios'
 
-interface DealData {
-    influencerId: string;
-    contractedBy: 'DIRECT' | 'AGENCY';
-    agencyName?: string;
-    pricingType: 'FIXED' | 'CPM';
-    fixedCost?: number;
-    cpm?: number;
-    priceCeiling?: number;
-    viewGuarantee?: number;
-    viewGuaranteeDays?: number;
-    postDate: Date;
-}
-
 interface Influencer {
     id: string;
     channelName: string;
+    channelYoutubeId: string;
     category: string;
-    trackingUrl: string;
+    avgViews: number;
+    callRequired: boolean;
+    engagementRate: number;
+    topCountriesProportion: number;
+    richCountriesFollowers: number;
+    maleFollowers: number;
+    followerGrowthRate: number;
+    englishSpeakingFollowers: number;
+    sponsoredVideos: string[];
 }
 
 interface Deal {
     id: string;
     influencer: Influencer;
-    contractedBy: 'DIRECT' | 'AGENCY';
-    pricingType: 'FIXED' | 'CPM';
-    fixedCost?: number;
-    cpm?: number;
-    priceCeiling?: number;
-    viewGuarantee?: number;
-    viewGuaranteeDays?: number;
+    status: 'Launched' | 'Pending' | 'Completed';
+    uploadMonth: string;
+    deliverables: string;
+    usage: string;
+    recut: string;
+    exclusivity: string;
+    viewGuarantee: {
+        amount: number;
+        days: number;
+    };
+    rate: number;
     postDate: string;
+    uploadLink: string;
+    trackingUrl: string;
+    contractedBy: 'DIRECT' | 'AGENCY';
+    agencyName?: string;
     videos: Array<{
         id: string;
         title: string;
@@ -63,8 +67,6 @@ interface CurrentMonthData {
 export default function InfluencerPortal() {
     const [activeTab, setActiveTab] = useState("dashboard")
     const [searchTerm, setSearchTerm] = useState("")
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-    const [currentDate, setCurrentDate] = useState(new Date())
     const [influencers, setInfluencers] = useState<Influencer[]>([])
     const [deals, setDeals] = useState<Deal[]>([])
     const [currentMonthData, setCurrentMonthData] = useState<CurrentMonthData>({
@@ -110,7 +112,7 @@ export default function InfluencerPortal() {
         }
     }
 
-    const handleDealSubmit = async (dealData: DealData) => {
+    const handleDealSubmit = async (dealData: Omit<Deal, 'id' | 'influencer' | 'videos'>) => {
         try {
             await axios.post('/api/deals', dealData)
             fetchDeals()
@@ -120,53 +122,72 @@ export default function InfluencerPortal() {
         }
     }
 
+    const handleInfluencerSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        const formData = new FormData(event.currentTarget)
+        const influencerData = {
+            channelName: formData.get('channelName') as string,
+            channelYoutubeId: formData.get('channelYoutubeId') as string,
+            category: formData.get('category') as string,
+            avgViews: parseInt(formData.get('avgViews') as string, 10),
+            callRequired: formData.get('callRequired') === 'on',
+            engagementRate: parseFloat(formData.get('engagementRate') as string),
+            topCountriesProportion: parseFloat(formData.get('topCountriesProportion') as string),
+            richCountriesFollowers: parseInt(formData.get('richCountriesFollowers') as string, 10),
+            maleFollowers: parseFloat(formData.get('maleFollowers') as string),
+            followerGrowthRate: parseFloat(formData.get('followerGrowthRate') as string),
+            englishSpeakingFollowers: parseInt(formData.get('englishSpeakingFollowers') as string, 10),
+            sponsoredVideos: [],
+        }
+
+        try {
+            await axios.post('/api/influencers', influencerData)
+            fetchInfluencers()
+            setActiveTab("influencers")
+        } catch (error) {
+            console.error('Error submitting influencer:', error)
+        }
+    }
+
+    const handleUpdateInfluencer = async (event: React.FormEvent<HTMLFormElement>, influencerId: string) => {
+        event.preventDefault()
+        const formData = new FormData(event.currentTarget)
+        const updatedData = {
+            callRequired: formData.get('callRequired') === 'on',
+        }
+
+        try {
+            await axios.put(`/api/influencers/${influencerId}`, updatedData)
+            fetchInfluencers()
+        } catch (error) {
+            console.error('Error updating influencer:', error)
+        }
+    }
+
+    const handleSponsoredVideoSubmit = async (event: React.FormEvent<HTMLFormElement>, influencerId: string) => {
+        event.preventDefault()
+        const formData = new FormData(event.currentTarget)
+        const videoUrl = formData.get('videoUrl') as string
+
+        const influencer = influencers.find(inf => inf.id === influencerId)
+        if (!influencer || influencer.sponsoredVideos.length >= 5) {
+            alert("Maximum of 5 sponsored videos allowed.")
+            return
+        }
+
+        try {
+            const updatedVideos = [...influencer.sponsoredVideos, videoUrl]
+            await axios.put(`/api/influencers/${influencerId}`, { sponsoredVideos: updatedVideos })
+            fetchInfluencers()
+        } catch (error) {
+            console.error('Error submitting sponsored video:', error)
+        }
+    }
+
     const filteredInfluencers = influencers.filter(influencer =>
         influencer.channelName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         influencer.category.toLowerCase().includes(searchTerm.toLowerCase())
     )
-
-    const getInfluencerVideos = (influencerId: string) => {
-        return deals
-            .filter(deal => deal.influencer.id === influencerId)
-            .flatMap(deal => deal.videos)
-    }
-
-    const getInfluencersForDate = (date: Date) => {
-        return deals.filter(deal => {
-            const postDate = new Date(deal.postDate)
-            return postDate.toDateString() === date.toDateString()
-        }).map(deal => deal.influencer)
-    }
-
-    const getInfluencerCountForDate = (date: Date) => {
-        return getInfluencersForDate(date).length
-    }
-
-    const getDaysAround = (date: Date, daysAround: number) => {
-        const days = []
-        for (let i = -daysAround; i <= daysAround; i++) {
-            const day = new Date(date)
-            day.setDate(date.getDate() + i)
-            days.push(day)
-        }
-        return days
-    }
-
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-    }
-
-    const nextWeek = () => {
-        const nextDate = new Date(currentDate)
-        nextDate.setDate(currentDate.getDate() + 7)
-        setCurrentDate(nextDate)
-    }
-
-    const prevWeek = () => {
-        const prevDate = new Date(currentDate)
-        prevDate.setDate(currentDate.getDate() - 7)
-        setCurrentDate(prevDate)
-    }
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -207,20 +228,6 @@ export default function InfluencerPortal() {
                     >
                         <DollarSign className="mr-2 h-4 w-4" />
                         Deals
-                    </Button>
-                    <Button
-                        variant={activeTab === "calendar" ? "default" : "outline"}
-                        onClick={() => setActiveTab("calendar")}
-                    >
-                        <CalendarDays className="mr-2 h-4 w-4" />
-                        Calendar
-                    </Button>
-                    <Button
-                        variant={activeTab === "videos" ? "default" : "outline"}
-                        onClick={() => setActiveTab("videos")}
-                    >
-                        <Video className="mr-2 h-4 w-4" />
-                        Influencer Videos
                     </Button>
                     <Button
                         variant={activeTab === "add" ? "default" : "outline"}
@@ -318,59 +325,71 @@ export default function InfluencerPortal() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Channel Name</TableHead>
+                                            <TableHead>YouTube ID</TableHead>
                                             <TableHead>Category</TableHead>
-                                            <TableHead>Tracking URL</TableHead>
+                                            <TableHead>Avg Views</TableHead>
+                                            <TableHead>Engagement Rate</TableHead>
+                                            <TableHead>Top Countries</TableHead>
+                                            <TableHead>Rich Countries Followers</TableHead>
+                                            <TableHead>Male Followers</TableHead>
+                                            <TableHead>Follower Growth Rate</TableHead>
+                                            <TableHead>English Speaking Followers</TableHead>
                                             <TableHead>Actions</TableHead>
+
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredInfluencers.map((influencer) => (
                                             <TableRow key={influencer.id}>
                                                 <TableCell>{influencer.channelName}</TableCell>
+                                                <TableCell>{influencer.channelYoutubeId}</TableCell>
                                                 <TableCell>{influencer.category}</TableCell>
-                                                <TableCell>{influencer.trackingUrl}</TableCell>
+                                                <TableCell>{influencer.avgViews.toLocaleString()}</TableCell>
+                                                <TableCell>{influencer.engagementRate.toFixed(2)}%</TableCell>
+                                                <TableCell>{influencer.topCountriesProportion.toFixed(2)}%</TableCell>
+                                                <TableCell>{influencer.richCountriesFollowers.toLocaleString()}</TableCell>
+                                                <TableCell>{influencer.maleFollowers.toFixed(2)}%</TableCell>
+                                                <TableCell>{influencer.followerGrowthRate.toFixed(2)}%</TableCell>
+                                                <TableCell>{influencer.englishSpeakingFollowers.toLocaleString()}</TableCell>
                                                 <TableCell>
                                                     <Dialog>
                                                         <DialogTrigger asChild>
                                                             <Button variant="outline" size="sm">
-                                                                View Details
+                                                                Update
                                                             </Button>
                                                         </DialogTrigger>
-                                                        <DialogContent  className="max-w-4xl">
+                                                        <DialogContent className="max-w-4xl">
                                                             <DialogHeader>
-                                                                <DialogTitle>{influencer.channelName} - Performance Details</DialogTitle>
-                                                                <DialogDescription>
-                                                                    Overall performance metrics and individual video statistics
-                                                                </DialogDescription>
+                                                                <DialogTitle>{influencer.channelName} - Update Influencer</DialogTitle>
                                                             </DialogHeader>
                                                             <div className="grid gap-4 py-4">
-                                                                <Card>
-                                                                    <CardHeader>
-                                                                        <CardTitle>Video Performance</CardTitle>
-                                                                    </CardHeader>
-                                                                    <CardContent>
-                                                                        <Table>
-                                                                            <TableHeader>
-                                                                                <TableRow>
-                                                                                    <TableHead>Title</TableHead>
-                                                                                    <TableHead>Views</TableHead>
-                                                                                    <TableHead>Likes</TableHead>
-                                                                                    <TableHead>Comments</TableHead>
-                                                                                </TableRow>
-                                                                            </TableHeader>
-                                                                            <TableBody>
-                                                                                {getInfluencerVideos(influencer.id).map((video) => (
-                                                                                    <TableRow key={video.id}>
-                                                                                        <TableCell>{video.title}</TableCell>
-                                                                                        <TableCell>{video.views.toLocaleString()}</TableCell>
-                                                                                        <TableCell>{video.likes.toLocaleString()}</TableCell>
-                                                                                        <TableCell>{video.comments.toLocaleString()}</TableCell>
-                                                                                    </TableRow>
-                                                                                ))}
-                                                                            </TableBody>
-                                                                        </Table>
-                                                                    </CardContent>
-                                                                </Card>
+                                                                <form onSubmit={(e) => handleUpdateInfluencer(e, influencer.id)} className="space-y-4">
+                                                                    <div className="flex items-center">
+                                                                        <Checkbox
+                                                                            id={`callRequired-${influencer.id}`}
+                                                                            name="callRequired"
+                                                                            defaultChecked={influencer.callRequired}
+                                                                        />
+                                                                        <label htmlFor={`callRequired-${influencer.id}`} className="ml-2 block text-sm font-medium text-gray-700">
+                                                                            Onboarding Call Done
+                                                                        </label>
+                                                                    </div>
+                                                                    <Button type="submit">Update Influencer</Button>
+                                                                </form>
+                                                                <h3 className="text-lg font-semibold mt-4">Sponsored Videos</h3>
+                                                                <ul>
+                                                                    {influencer.sponsoredVideos.map((video, index) => (
+                                                                        <li key={index}>
+                                                                            <a href={video} target="_blank" rel="noopener noreferrer">{video}</a>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                                {influencer.sponsoredVideos.length < 5 && (
+                                                                    <form onSubmit={(e) => handleSponsoredVideoSubmit(e, influencer.id)} className="space-y-2">
+                                                                        <Input name="videoUrl" placeholder="Enter sponsored video URL" />
+                                                                        <Button type="submit">Add Sponsored Video</Button>
+                                                                    </form>
+                                                                )}
                                                             </div>
                                                         </DialogContent>
                                                     </Dialog>
@@ -393,103 +412,57 @@ export default function InfluencerPortal() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Influencer</TableHead>
-                                            <TableHead>Contracted By</TableHead>
-                                            <TableHead>Pricing Type</TableHead>
-                                            <TableHead>Cost</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Upload Month</TableHead>
+                                            <TableHead>Deliverables</TableHead>
                                             <TableHead>View Guarantee</TableHead>
+                                            <TableHead>Rate (USD)</TableHead>
                                             <TableHead>Post Date</TableHead>
+                                            <TableHead>Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {deals.map((deal) => (
                                             <TableRow key={deal.id}>
                                                 <TableCell>{deal.influencer.channelName}</TableCell>
-                                                <TableCell>{deal.contractedBy}</TableCell>
-                                                <TableCell>{deal.pricingType}</TableCell>
-                                                <TableCell>
-                                                    {deal.pricingType === 'FIXED'
-                                                        ? `$${deal.fixedCost}`
-                                                        : `$${deal.cpm} CPM (Max: $${deal.priceCeiling})`}
-                                                </TableCell>
-                                                <TableCell>{deal.viewGuarantee ? `${deal.viewGuarantee} views in ${deal.viewGuaranteeDays} days` : 'N/A'}</TableCell>
+                                                <TableCell>{deal.status}</TableCell>
+                                                <TableCell>{deal.uploadMonth}</TableCell>
+                                                <TableCell>{deal.deliverables}</TableCell>
+                                                <TableCell>{deal.viewGuarantee.amount.toLocaleString()} views in {deal.viewGuarantee.days} days</TableCell>
+                                                <TableCell>${deal.rate.toLocaleString()}</TableCell>
                                                 <TableCell>{new Date(deal.postDate).toLocaleDateString()}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </>
-                )}
-
-                {activeTab === "calendar" && (
-                    <>
-                        <h2 className="text-2xl font-bold mb-4">Posting Schedule</h2>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle>
-                                    {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                                </CardTitle>
-                                <div className="space-x-2">
-                                    <Button variant="outline" size="sm" onClick={prevWeek}>
-                                        <ChevronLeft className="h-4 w-4 mr-1" /> Prev Week
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={nextWeek}>
-                                        Next Week <ChevronRight className="h-4 w-4 ml-1" />
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-1/3">Date</TableHead>
-                                            <TableHead>Influencers Posting</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {getDaysAround(currentDate, 3).map((date) => (
-                                            <TableRow key={date.toISOString()} className={date.toDateString() === currentDate.toDateString() ? 'bg-muted' : ''}>
-                                                <TableCell className="font-medium">{formatDate(date)}</TableCell>
                                                 <TableCell>
-                                                    {getInfluencersForDate(date).map(inf => inf.channelName).join(", ") || 'No posts scheduled'}
+                                                    <Dialog>
+                                                        <DialogTrigger asChild>
+                                                            <Button variant="outline" size="sm">
+                                                                View Details
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent className="max-w-4xl">
+                                                            <DialogHeader>
+                                                                <DialogTitle>{deal.influencer.channelName} - Deal Details</DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="grid gap-4 py-4">
+                                                                <h3 className="text-lg font-semibold">Deal Information</h3>
+                                                                <p>Status: {deal.status}</p>
+                                                                <p>Upload Month: {deal.uploadMonth}</p>
+                                                                <p>Deliverables: {deal.deliverables}</p>
+                                                                <p>Usage: {deal.usage}</p>
+                                                                <p>Recut: {deal.recut}</p>
+                                                                <p>Exclusivity: {deal.exclusivity}</p>
+                                                                <p>View Guarantee: {deal.viewGuarantee.amount.toLocaleString()} views in {deal.viewGuarantee.days} days</p>
+                                                                <p>Rate: ${deal.rate.toLocaleString()} USD</p>
+                                                                <p>Post Date: {new Date(deal.postDate).toLocaleDateString()}</p>
+                                                                <p>Upload Link: <a href={deal.uploadLink} target="_blank" rel="noopener noreferrer">{deal.uploadLink}</a></p>
+                                                                <p>Tracking URL: <a href={deal.trackingUrl} target="_blank" rel="noopener noreferrer">{deal.trackingUrl}</a></p>
+                                                                <p>Contracted By: {deal.contractedBy}</p>
+                                                                {deal.agencyName && <p>Agency Name: {deal.agencyName}</p>}
+                                                            </div>
+                                                        </DialogContent>
+                                                    </Dialog>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </>
-                )}
-
-                {activeTab === "videos" && (
-                    <>
-                        <h2 className="text-2xl font-bold mb-4">Influencer Videos</h2>
-                        <Card>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Influencer</TableHead>
-                                            <TableHead>Video Title</TableHead>
-                                            <TableHead>Views</TableHead>
-                                            <TableHead>Likes</TableHead>
-                                            <TableHead>Comments</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {deals.flatMap(deal =>
-                                            deal.videos.map(video => (
-                                                <TableRow key={video.id}>
-                                                    <TableCell>{deal.influencer.channelName}</TableCell>
-                                                    <TableCell>{video.title}</TableCell>
-                                                    <TableCell>{video.views.toLocaleString()}</TableCell>
-                                                    <TableCell>{video.likes.toLocaleString()}</TableCell>
-                                                    <TableCell>{video.comments.toLocaleString()}</TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
                                     </TableBody>
                                 </Table>
                             </CardContent>
@@ -506,25 +479,73 @@ export default function InfluencerPortal() {
                                 <CardDescription>Enter the details of the new influencer</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <form className="space-y-4">
+                                <form onSubmit={handleInfluencerSubmit} className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label htmlFor="channelName" className="block text-sm font-medium text-gray-700">
                                                 Channel Name
                                             </label>
-                                            <Input id="channelName" placeholder="Channel name" />
+                                            <Input id="channelName" name="channelName" placeholder="Channel name" required />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="channelYoutubeId" className="block text-sm font-medium text-gray-700">
+                                                Channel YouTube ID
+                                            </label>
+                                            <Input id="channelYoutubeId" name="channelYoutubeId" placeholder="e.g., @ChannelName" required />
                                         </div>
                                         <div>
                                             <label htmlFor="category" className="block text-sm font-medium text-gray-700">
                                                 Category
                                             </label>
-                                            <Input id="category" placeholder="e.g., Technology, Fashion" />
+                                            <Input id="category" name="category" placeholder="e.g., Technology, Fashion" required />
                                         </div>
                                         <div>
-                                            <label htmlFor="trackingUrl" className="block text-sm font-medium text-gray-700">
-                                                Tracking URL
+                                            <label htmlFor="avgViews" className="block text-sm font-medium text-gray-700">
+                                                Average Views
                                             </label>
-                                            <Input id="trackingUrl" placeholder="https://example.com/influencer" />
+                                            <Input id="avgViews" name="avgViews" type="number" placeholder="e.g., 25000" required />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="engagementRate" className="block text-sm font-medium text-gray-700">
+                                                Engagement Rate (%)
+                                            </label>
+                                            <Input id="engagementRate" name="engagementRate" type="number" step="0.01" placeholder="e.g., 5 for 5%" required />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="topCountriesProportion" className="block text-sm font-medium text-gray-700">
+                                                Top Countries Proportion (%)
+                                            </label>
+                                            <Input id="topCountriesProportion" name="topCountriesProportion" type="number" step="0.01" placeholder="e.g., 40 for 40%" required />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="richCountriesFollowers" className="block text-sm font-medium text-gray-700">
+                                                Rich Countries Followers
+                                            </label>
+                                            <Input id="richCountriesFollowers" name="richCountriesFollowers" type="number" placeholder="e.g., 50000" required />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="maleFollowers" className="block text-sm font-medium text-gray-700">
+                                                Male Followers (%)
+                                            </label>
+                                            <Input id="maleFollowers" name="maleFollowers" type="number" step="0.1" placeholder="e.g., 60 for 60%" required />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="followerGrowthRate" className="block text-sm font-medium text-gray-700">
+                                                Follower Growth Rate (%)
+                                            </label>
+                                            <Input id="followerGrowthRate" name="followerGrowthRate" type="number" step="0.01" placeholder="e.g., 5 for 5%" required />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="englishSpeakingFollowers" className="block text-sm font-medium text-gray-700">
+                                                English Speaking Followers
+                                            </label>
+                                            <Input id="englishSpeakingFollowers" name="englishSpeakingFollowers" type="number" placeholder="e.g., 75000" required />
+                                        </div>
+                                        <div className="flex items-center">
+                                            <Checkbox id="callRequired" name="callRequired" />
+                                            <label htmlFor="callRequired" className="ml-2 block text-sm font-medium text-gray-700">
+                                                Onboarding Call Done
+                                            </label>
                                         </div>
                                     </div>
                                     <Button type="submit">Add Influencer</Button>
