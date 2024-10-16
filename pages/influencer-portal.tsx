@@ -10,6 +10,19 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { DealForm } from "@/components/ui/deal-form"
 import axios from 'axios'
 
+interface DealData {
+    influencerId: string;
+    contractedBy: 'DIRECT' | 'AGENCY';
+    agencyName?: string;
+    pricingType: 'FIXED' | 'CPM';
+    fixedCost?: number;
+    cpm?: number;
+    priceCeiling?: number;
+    viewGuarantee?: number;
+    viewGuaranteeDays?: number;
+    postDate: Date;
+}
+
 export default function InfluencerPortal() {
     const [activeTab, setActiveTab] = useState("dashboard")
     const [searchTerm, setSearchTerm] = useState("")
@@ -60,7 +73,7 @@ export default function InfluencerPortal() {
         }
     }
 
-    const handleDealSubmit = async (dealData) => {
+    const handleDealSubmit = async (dealData: DealData) => {
         try {
             await axios.post('/api/deals', dealData)
             fetchDeals()
