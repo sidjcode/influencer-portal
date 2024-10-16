@@ -318,6 +318,7 @@ export default function InfluencerPortal() {
                                                                                     </TableRow>
                                                                                 ))}
                                                                             </TableBody>
+
                                                                         </Table>
                                                                     </CardContent>
                                                                 </Card>
