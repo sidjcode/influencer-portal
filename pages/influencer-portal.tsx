@@ -562,6 +562,33 @@ export default function InfluencerPortal() {
                     </>
                 )}
 
+                {activeTab === "update" && (
+                    <>
+                        <h2 className="text-2xl font-bold mb-4">Update Influencer</h2>
+                        <form className="space-y-4">
+                            <div className="flex items-center">
+                                <Checkbox
+                                    id="callRequired"
+                                    name="callRequired"
+                                    defaultChecked={false} // Update this with appropriate state or binding
+                                />
+                                <label htmlFor="callRequired" className="ml-2 block text-sm font-medium text-gray-700">
+                                    Onboarding Call Done
+                                </label>
+                            </div>
+                            <div>
+                                <label>Sponsored Videos:</label>
+                                <div>
+                                    <Input type="text" placeholder="Video URL 1" />
+                                    {/* Add more video inputs as needed */}
+                                </div>
+                            </div>
+                            <Button type="submit">Update Influencer</Button>
+                        </form>
+                    </>
+                )}
+
+
                 {activeTab === "addDeal" && (
                     <>
                         <h2 className="text-2xl font-bold mb-4">Add Deal</h2>
