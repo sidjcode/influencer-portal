@@ -569,8 +569,8 @@ export default function InfluencerPortal() {
                         <h2 className="text-2xl font-bold mb-4">Update Influencer</h2>
                         <div>
                             <label htmlFor="influencerSelect" className="block text-sm font-medium text-gray-700">Select Influencer</label>
-                            <Select id="influencerSelect" onValueChange={(value) => setSelectedInfluencer(value)}>
-                                <SelectTrigger>
+                            <Select onValueChange={(value) => setSelectedInfluencer(value)}>
+                            <SelectTrigger>
                                     <SelectValue placeholder="Search and select influencer..." />
                                 </SelectTrigger>
                                 <SelectContent>
