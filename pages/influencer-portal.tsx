@@ -68,10 +68,7 @@ export default function InfluencerPortal() {
     const [activeTab, setActiveTab] = useState("dashboard")
     const [searchTerm, setSearchTerm] = useState("")
     const [influencers, setInfluencers] = useState<Influencer[]>([])
-    const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
     const [deals, setDeals] = useState<Deal[]>([])
-    const [callRequired, setCallRequired] = useState(false);
-    const [sponsoredVideos, setSponsoredVideos] = useState<string[]>(['']);
     const [currentMonthData, setCurrentMonthData] = useState<CurrentMonthData>({
         postedInfluencers: 0,
         totalViews: 0,
@@ -81,6 +78,9 @@ export default function InfluencerPortal() {
         cost: 0,
         agencyFee: 0,
     })
+    const [callRequired, setCallRequired] = useState(false)
+    const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
+    const [sponsoredVideos, setSponsoredVideos] = useState<string[]>(['']);
 
     useEffect(() => {
         fetchInfluencers()
@@ -133,7 +133,7 @@ export default function InfluencerPortal() {
             channelYoutubeId: formData.get('channelYoutubeId') as string,
             category: formData.get('category') as string,
             avgViews: parseInt(formData.get('avgViews') as string, 10),
-            callRequired: formData.get('callRequired') === 'on',
+            callRequired: callRequired,
             engagementRate: parseFloat(formData.get('engagementRate') as string),
             topCountriesProportion: parseFloat(formData.get('topCountriesProportion') as string),
             richCountriesFollowers: parseInt(formData.get('richCountriesFollowers') as string, 10),
@@ -149,41 +149,6 @@ export default function InfluencerPortal() {
             setActiveTab("influencers")
         } catch (error) {
             console.error('Error submitting influencer:', error)
-        }
-    }
-
-    const handleUpdateInfluencer = async (event: React.FormEvent<HTMLFormElement>, influencerId: string) => {
-        event.preventDefault()
-        const formData = new FormData(event.currentTarget)
-        const updatedData = {
-            callRequired: formData.get('callRequired') === 'on',
-        }
-
-        try {
-            await axios.put(`/api/influencers/${influencerId}`, updatedData)
-            fetchInfluencers()
-        } catch (error) {
-            console.error('Error updating influencer:', error)
-        }
-    }
-
-    const handleSponsoredVideoSubmit = async (event: React.FormEvent<HTMLFormElement>, influencerId: string) => {
-        event.preventDefault()
-        const formData = new FormData(event.currentTarget)
-        const videoUrl = formData.get('videoUrl') as string
-
-        const influencer = influencers.find(inf => inf.id === influencerId)
-        if (!influencer || influencer.sponsoredVideos.length >= 5) {
-            alert("Maximum of 5 sponsored videos allowed.")
-            return
-        }
-
-        try {
-            const updatedVideos = [...influencer.sponsoredVideos, videoUrl]
-            await axios.put(`/api/influencers/${influencerId}`, { sponsoredVideos: updatedVideos })
-            fetchInfluencers()
-        } catch (error) {
-            console.error('Error submitting sponsored video:', error)
         }
     }
 
@@ -240,18 +205,18 @@ export default function InfluencerPortal() {
                         Add Influencer
                     </Button>
                     <Button
-                        variant={activeTab === "update" ? "default" : "outline"}
-                        onClick={() => setActiveTab("update")}
-                    >
-                        <Users className="mr-2 h-4 w-4" />
-                        Update Influencer
-                    </Button>
-                    <Button
                         variant={activeTab === "addDeal" ? "default" : "outline"}
                         onClick={() => setActiveTab("addDeal")}
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Add Deal
+                    </Button>
+                    <Button
+                        variant={activeTab === "update" ? "default" : "outline"}
+                        onClick={() => setActiveTab("update")}
+                    >
+                        <Users className="mr-2 h-4 w-4" />
+                        Update Influencer
                     </Button>
                 </div>
 
@@ -345,7 +310,6 @@ export default function InfluencerPortal() {
                                             <TableHead>Follower Growth Rate</TableHead>
                                             <TableHead>English Speaking Followers</TableHead>
                                             <TableHead>Actions</TableHead>
-
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -362,47 +326,9 @@ export default function InfluencerPortal() {
                                                 <TableCell>{influencer.followerGrowthRate.toFixed(2)}%</TableCell>
                                                 <TableCell>{influencer.englishSpeakingFollowers.toLocaleString()}</TableCell>
                                                 <TableCell>
-                                                    <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <Button variant="outline" size="sm">
-                                                                Update
-                                                            </Button>
-                                                        </DialogTrigger>
-                                                        <DialogContent className="max-w-4xl">
-                                                            <DialogHeader>
-                                                                <DialogTitle>{influencer.channelName} - Update Influencer</DialogTitle>
-                                                            </DialogHeader>
-                                                            <div className="grid gap-4 py-4">
-                                                                <form onSubmit={(e) => handleUpdateInfluencer(e, influencer.id)} className="space-y-4">
-                                                                    <div className="flex items-center">
-                                                                        <Checkbox
-                                                                            id={`callRequired-${influencer.id}`}
-                                                                            name="callRequired"
-                                                                            defaultChecked={influencer.callRequired}
-                                                                        />
-                                                                        <label htmlFor={`callRequired-${influencer.id}`} className="ml-2 block text-sm font-medium text-gray-700">
-                                                                            Onboarding Call Done
-                                                                        </label>
-                                                                    </div>
-                                                                    <Button type="submit">Update Influencer</Button>
-                                                                </form>
-                                                                <h3 className="text-lg font-semibold mt-4">Sponsored Videos</h3>
-                                                                <ul>
-                                                                    {influencer.sponsoredVideos.map((video, index) => (
-                                                                        <li key={index}>
-                                                                            <a href={video} target="_blank" rel="noopener noreferrer">{video}</a>
-                                                                        </li>
-                                                                    ))}
-                                                                </ul>
-                                                                {influencer.sponsoredVideos.length < 5 && (
-                                                                    <form onSubmit={(e) => handleSponsoredVideoSubmit(e, influencer.id)} className="space-y-2">
-                                                                        <Input name="videoUrl" placeholder="Enter sponsored video URL" />
-                                                                        <Button type="submit">Add Sponsored Video</Button>
-                                                                    </form>
-                                                                )}
-                                                            </div>
-                                                        </DialogContent>
-                                                    </Dialog>
+                                                    <Button variant="outline" size="sm">
+                                                        View  Details
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -438,8 +364,8 @@ export default function InfluencerPortal() {
                                                 <TableCell>{deal.status}</TableCell>
                                                 <TableCell>{deal.uploadMonth}</TableCell>
                                                 <TableCell>{deal.deliverables}</TableCell>
-                                                <TableCell>{deal.viewGuarantee.amount.toLocaleString()} views in {deal.viewGuarantee.days} days</TableCell>
-                                                <TableCell>${deal.rate.toLocaleString()}</TableCell>
+                                                <TableCell>{deal.viewGuarantee?.amount?.toLocaleString() ?? 'N/A'} views in {deal.viewGuarantee?.days ?? 'N/A'} days</TableCell>
+                                                <TableCell>${deal.rate?.toLocaleString() ?? 'N/A'}</TableCell>
                                                 <TableCell>{new Date(deal.postDate).toLocaleDateString()}</TableCell>
                                                 <TableCell>
                                                     <Dialog>
@@ -460,8 +386,8 @@ export default function InfluencerPortal() {
                                                                 <p>Usage: {deal.usage}</p>
                                                                 <p>Recut: {deal.recut}</p>
                                                                 <p>Exclusivity: {deal.exclusivity}</p>
-                                                                <p>View Guarantee: {deal.viewGuarantee.amount.toLocaleString()} views in {deal.viewGuarantee.days} days</p>
-                                                                <p>Rate: ${deal.rate.toLocaleString()} USD</p>
+                                                                <p>View Guarantee: {deal.viewGuarantee?.amount?.toLocaleString() ?? 'N/A'} views in {deal.viewGuarantee?.days ?? 'N/A'} days</p>
+                                                                <p>Rate: ${deal.rate?.toLocaleString() ?? 'N/A'} USD</p>
                                                                 <p>Post Date: {new Date(deal.postDate).toLocaleDateString()}</p>
                                                                 <p>Upload Link: <a href={deal.uploadLink} target="_blank" rel="noopener noreferrer">{deal.uploadLink}</a></p>
                                                                 <p>Tracking URL: <a href={deal.trackingUrl} target="_blank" rel="noopener noreferrer">{deal.trackingUrl}</a></p>
@@ -552,7 +478,12 @@ export default function InfluencerPortal() {
                                             <Input id="englishSpeakingFollowers" name="englishSpeakingFollowers" type="number" placeholder="e.g., 75000" required />
                                         </div>
                                         <div className="flex items-center">
-                                            <Checkbox id="callRequired" name="callRequired" />
+                                            <Checkbox
+                                                id="callRequired"
+                                                name="callRequired"
+                                                checked={callRequired}
+                                                onChange={(e) => setCallRequired(e.target.checked)}
+                                            />
                                             <label htmlFor="callRequired" className="ml-2 block text-sm font-medium text-gray-700">
                                                 Onboarding Call Done
                                             </label>
@@ -562,6 +493,13 @@ export default function InfluencerPortal() {
                                 </form>
                             </CardContent>
                         </Card>
+                    </>
+                )}
+
+                {activeTab === "addDeal" && (
+                    <>
+                        <h2 className="text-2xl font-bold mb-4">Add Deal</h2>
+                        <DealForm onSubmit={handleDealSubmit} />
                     </>
                 )}
 
@@ -596,23 +534,15 @@ export default function InfluencerPortal() {
 
                         <div className="flex items-center mt-4">
                             <Checkbox
-                                id="callRequired"
-                                name="callRequired"
+                                id="callRequiredUpdate"
+                                name="callRequiredUpdate"
                                 checked={callRequired}
                                 onChange={(e) => setCallRequired(e.target.checked)}
                             />
-                            <label htmlFor="callRequired" className="ml-2 block text-sm font-medium text-gray-700">
+                            <label htmlFor="callRequiredUpdate" className="ml-2 block text-sm font-medium text-gray-700">
                                 Onboarding Call Done
                             </label>
                         </div>
-                    </>
-                )}
-
-
-                {activeTab === "addDeal" && (
-                    <>
-                        <h2 className="text-2xl font-bold mb-4">Add Deal</h2>
-                        <DealForm onSubmit={handleDealSubmit} />
                     </>
                 )}
             </main>
