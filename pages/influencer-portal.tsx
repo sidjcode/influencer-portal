@@ -482,7 +482,7 @@ export default function InfluencerPortal() {
                                                 id="callRequired"
                                                 name="callRequired"
                                                 checked={callRequired}
-                                                onChange={(e) => setCallRequired(e.target.checked)}
+                                                onCheckedChange={(checked) => setCallRequired(checked as boolean)}
                                             />
                                             <label htmlFor="callRequired" className="ml-2 block text-sm font-medium text-gray-700">
                                                 Onboarding Call Done
@@ -537,7 +537,7 @@ export default function InfluencerPortal() {
                                 id="callRequiredUpdate"
                                 name="callRequiredUpdate"
                                 checked={callRequired}
-                                onChange={(e) => setCallRequired(e.target.checked)}
+                                onCheckedChange={(checked) => setCallRequired(checked as boolean)}
                             />
                             <label htmlFor="callRequiredUpdate" className="ml-2 block text-sm font-medium text-gray-700">
                                 Onboarding Call Done
