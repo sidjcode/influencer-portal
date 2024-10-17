@@ -69,6 +69,8 @@ export default function InfluencerPortal() {
     const [searchTerm, setSearchTerm] = useState("")
     const [influencers, setInfluencers] = useState<Influencer[]>([])
     const [deals, setDeals] = useState<Deal[]>([])
+    const [callRequired, setCallRequired] = useState(false);
+    const [sponsoredVideos, setSponsoredVideos] = useState<string[]>(['']);
     const [currentMonthData, setCurrentMonthData] = useState<CurrentMonthData>({
         postedInfluencers: 0,
         totalViews: 0,
@@ -565,26 +567,40 @@ export default function InfluencerPortal() {
                 {activeTab === "update" && (
                     <>
                         <h2 className="text-2xl font-bold mb-4">Update Influencer</h2>
-                        <form className="space-y-4">
-                            <div className="flex items-center">
-                                <Checkbox
-                                    id="callRequired"
-                                    name="callRequired"
-                                    defaultChecked={false} // Update this with appropriate state or binding
-                                />
-                                <label htmlFor="callRequired" className="ml-2 block text-sm font-medium text-gray-700">
-                                    Onboarding Call Done
-                                </label>
-                            </div>
-                            <div>
-                                <label>Sponsored Videos:</label>
-                                <div>
-                                    <Input type="text" placeholder="Video URL 1" />
-                                    {/* Add more video inputs as needed */}
-                                </div>
-                            </div>
-                            <Button type="submit">Update Influencer</Button>
-                        </form>
+                        <div>
+                            <label htmlFor="influencerSelect" className="block text-sm font-medium text-gray-700">Select Influencer</label>
+                            <Select id="influencerSelect" onValueChange={(value) => setSelectedInfluencer(value)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Search and select influencer..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {influencers.map((inf) => (
+                                        <SelectItem key={inf.id} value={inf.id}>{inf.channelName}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <h3 className="text-lg font-semibold mt-4">Sponsored Videos</h3>
+                        <ul>
+                            {selectedInfluencer && selectedInfluencer.sponsoredVideos.map((video, index) => (
+                                <li key={index}>
+                                    <a href={video} target="_blank" rel="noopener noreferrer">{video}</a>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div className="flex items-center mt-4">
+                            <Checkbox
+                                id="callRequired"
+                                name="callRequired"
+                                checked={callRequired}
+                                onChange={(e) => setCallRequired(e.target.checked)}
+                            />
+                            <label htmlFor="callRequired" className="ml-2 block text-sm font-medium text-gray-700">
+                                Onboarding Call Done
+                            </label>
+                        </div>
                     </>
                 )}
 
