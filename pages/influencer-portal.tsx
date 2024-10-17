@@ -68,6 +68,7 @@ export default function InfluencerPortal() {
     const [activeTab, setActiveTab] = useState("dashboard")
     const [searchTerm, setSearchTerm] = useState("")
     const [influencers, setInfluencers] = useState<Influencer[]>([])
+    const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
     const [deals, setDeals] = useState<Deal[]>([])
     const [callRequired, setCallRequired] = useState(false);
     const [sponsoredVideos, setSponsoredVideos] = useState<string[]>(['']);
@@ -569,8 +570,11 @@ export default function InfluencerPortal() {
                         <h2 className="text-2xl font-bold mb-4">Update Influencer</h2>
                         <div>
                             <label htmlFor="influencerSelect" className="block text-sm font-medium text-gray-700">Select Influencer</label>
-                            <Select onValueChange={(value) => setSelectedInfluencer(value)}>
-                            <SelectTrigger>
+                            <Select onValueChange={(value) => {
+                                const influencer = influencers.find((inf) => inf.id === value);
+                                setSelectedInfluencer(influencer || null);
+                            }}>
+                                <SelectTrigger>
                                     <SelectValue placeholder="Search and select influencer..." />
                                 </SelectTrigger>
                                 <SelectContent>
