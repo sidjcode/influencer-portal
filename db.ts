@@ -70,4 +70,5 @@ export async function closeDb(): Promise<void> {
     }
 }
 
-export { openDb };
+// Remove this line as openDb is already exported above
+// export { openDb };

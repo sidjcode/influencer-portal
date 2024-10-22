@@ -2,5 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js"
+  "/api/influencers": "pages/api/influencers.js",
+  "/": "pages/index.js",
+  "/influencer-portal": "pages/influencer-portal.js",
+  "/api/deals": "pages/api/deals.js"
 }

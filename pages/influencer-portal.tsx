@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { BarChart, Users, UserPlus, Search, DollarSign, Percent, MousePointer, ShoppingCart, CalendarDays, Video, ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { toast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import axios from 'axios'
 
 interface Influencer {
@@ -81,15 +81,16 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
     const [sponsoredVideos, setSponsoredVideos] = useState<string[]>(['']);
     const [newInfluencer, setNewInfluencer] = useState({ channelName: '', category: '', trackingUrl: '' })
     const [isLoading, setIsLoading] = useState(false)
+    const { toast } = useToast()
 
     useEffect(() => {
-        if (influencers.length === 0) {
+        if (!influencers || influencers.length === 0) {
             fetchInfluencers()
         }
-        if (deals.length === 0) {
+        if (!deals || deals.length === 0) {
             fetchDeals()
         }
-        if (Object.keys(currentMonthData).length === 0) {
+        if (!currentMonthData || Object.keys(currentMonthData).length === 0) {
             fetchCurrentMonthData()
         }
     }, [])
@@ -206,10 +207,10 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
         }
     }
 
-    const filteredInfluencers = influencers.filter(influencer =>
-        influencer.channelName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        influencer.category.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredInfluencers = influencers ? influencers.filter(influencer =>
+        (influencer.channelName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+        (influencer.category?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+    ) : []
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -290,7 +291,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <Users className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData.postedInfluencers}</div>
+                                            <div className="text-2xl font-bold">{currentMonthData?.postedInfluencers}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -299,7 +300,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <BarChart className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData.totalViews.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">{currentMonthData?.totalViews.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -308,7 +309,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <MousePointer className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData.totalClicks.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">{currentMonthData?.totalClicks.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -317,7 +318,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData.totalConversions.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">{currentMonthData?.totalConversions.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -326,7 +327,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <Percent className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData.roi}%</div>
+                                            <div className="text-2xl font-bold">{currentMonthData?.roi}%</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -335,7 +336,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">${currentMonthData.cost.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">${currentMonthData?.cost.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -344,7 +345,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <DollarSign className="h-4 w-4  text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">${currentMonthData.agencyFee.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">${currentMonthData?.agencyFee.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -418,47 +419,53 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {deals.map((deal) => (
-                                                    <TableRow key={deal.id}>
-                                                        <TableCell>{deal.influencer.channelName}</TableCell>
-                                                        <TableCell>{deal.status}</TableCell>
-                                                        <TableCell>{deal.uploadMonth}</TableCell>
-                                                        <TableCell>{deal.deliverables}</TableCell>
-                                                        <TableCell>{deal.viewGuarantee?.amount?.toLocaleString() ?? 'N/A'} views in {deal.viewGuarantee?.days ?? 'N/A'} days</TableCell>
-                                                        <TableCell>${deal.rate?.toLocaleString() ?? 'N/A'}</TableCell>
-                                                        <TableCell>{new Date(deal.postDate).toLocaleDateString()}</TableCell>
-                                                        <TableCell>
-                                                            <Dialog>
-                                                                <DialogTrigger asChild>
-                                                                    <Button variant="outline" size="sm">
-                                                                        View Details
-                                                                    </Button>
-                                                                </DialogTrigger>
-                                                                <DialogContent className="max-w-4xl">
-                                                                    <DialogHeader>
-                                                                        <DialogTitle>{deal.influencer.channelName} - Deal Details</DialogTitle>
-                                                                    </DialogHeader>
-                                                                    <div className="grid gap-4 py-4">
-                                                                        <h3 className="text-lg font-semibold">Deal Information</h3>
-                                                                        <p>Status: {deal.status}</p>
-                                                                        <p>Upload Month: {deal.uploadMonth}</p>
-                                                                        <p>Deliverables: {deal.deliverables}</p>
-                                                                        <p>Usage: {deal.usage}</p>
-                                                                        <p>Recut: {deal.recut}</p>
-                                                                        <p>Exclusivity: {deal.exclusivity}</p>
-                                                                        <p>View Guarantee: {deal.viewGuarantee?.amount?.toLocaleString() ?? 'N/A'} views in {deal.viewGuarantee?.days ?? 'N/A'} days</p>
-                                                                        <p>Rate: ${deal.rate?.toLocaleString() ?? 'N/A'} USD</p>
-                                                                        <p>Post Date: {new Date(deal.postDate).toLocaleDateString()}</p>
-                                                                        <p>Upload Link: <a href={deal.uploadLink} target="_blank" rel="noopener noreferrer">{deal.uploadLink}</a></p>
-                                                                        <p>Tracking URL: <a href={deal.trackingUrl} target="_blank" rel="noopener noreferrer">{deal.trackingUrl}</a></p>
-                                                                        <p>Contracted By: {deal.contractedBy}</p>
-                                                                        {deal.agencyName && <p>Agency Name: {deal.agencyName}</p>}
-                                                                    </div>
-                                                                </DialogContent>
-                                                            </Dialog>
-                                                        </TableCell>
+                                                {deals && deals.length > 0 ? (
+                                                    deals.map((deal) => (
+                                                        <TableRow key={deal.id}>
+                                                            <TableCell>{deal.influencer.channelName}</TableCell>
+                                                            <TableCell>{deal.status}</TableCell>
+                                                            <TableCell>{deal.uploadMonth}</TableCell>
+                                                            <TableCell>{deal.deliverables}</TableCell>
+                                                            <TableCell>{deal.viewGuarantee?.amount?.toLocaleString() ?? 'N/A'} views in {deal.viewGuarantee?.days ?? 'N/A'} days</TableCell>
+                                                            <TableCell>${deal.rate?.toLocaleString() ?? 'N/A'}</TableCell>
+                                                            <TableCell>{new Date(deal.postDate).toLocaleDateString()}</TableCell>
+                                                            <TableCell>
+                                                                <Dialog>
+                                                                    <DialogTrigger asChild>
+                                                                        <Button variant="outline" size="sm">
+                                                                            View Details
+                                                                        </Button>
+                                                                    </DialogTrigger>
+                                                                    <DialogContent className="max-w-4xl">
+                                                                        <DialogHeader>
+                                                                            <DialogTitle>{deal.influencer.channelName} - Deal Details</DialogTitle>
+                                                                        </DialogHeader>
+                                                                        <div className="grid gap-4 py-4">
+                                                                            <h3 className="text-lg font-semibold">Deal Information</h3>
+                                                                            <p>Status: {deal.status}</p>
+                                                                            <p>Upload Month: {deal.uploadMonth}</p>
+                                                                            <p>Deliverables: {deal.deliverables}</p>
+                                                                            <p>Usage: {deal.usage}</p>
+                                                                            <p>Recut: {deal.recut}</p>
+                                                                            <p>Exclusivity: {deal.exclusivity}</p>
+                                                                            <p>View Guarantee: {deal.viewGuarantee?.amount?.toLocaleString() ?? 'N/A'} views in {deal.viewGuarantee?.days ?? 'N/A'} days</p>
+                                                                            <p>Rate: ${deal.rate?.toLocaleString() ?? 'N/A'} USD</p>
+                                                                            <p>Post Date: {new Date(deal.postDate).toLocaleDateString()}</p>
+                                                                            <p>Upload Link: <a href={deal.uploadLink} target="_blank" rel="noopener noreferrer">{deal.uploadLink}</a></p>
+                                                                            <p>Tracking URL: <a href={deal.trackingUrl} target="_blank" rel="noopener noreferrer">{deal.trackingUrl}</a></p>
+                                                                            <p>Contracted By: {deal.contractedBy}</p>
+                                                                            {deal.agencyName && <p>Agency Name: {deal.agencyName}</p>}
+                                                                        </div>
+                                                                    </DialogContent>
+                                                                </Dialog>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={8} className="text-center">No deals available</TableCell>
                                                     </TableRow>
-                                                ))}
+                                                )}
                                             </TableBody>
                                         </Table>
                                     </CardContent>
@@ -581,11 +588,15 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                                             <SelectValue placeholder="Select Influencer" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {influencers.map((influencer) => (
-                                                                <SelectItem key={influencer.id} value={influencer.id}>
-                                                                    {influencer.channelName}
-                                                                </SelectItem>
-                                                            ))}
+                                                            {influencers && influencers.length > 0 ? (
+                                                                influencers.map((influencer) => (
+                                                                    <SelectItem key={influencer.id} value={influencer.id}>
+                                                                        {influencer.channelName}
+                                                                    </SelectItem>
+                                                                ))
+                                                            ) : (
+                                                                <SelectItem value="no-influencers" disabled>No influencers available</SelectItem>
+                                                            )}
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -704,16 +715,20 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                 <div>
                                     <label htmlFor="influencerSelect" className="block text-sm font-medium text-gray-700">Select Influencer</label>
                                     <Select onValueChange={(value) => {
-                                        const influencer = influencers.find((inf) => inf.id === value);
+                                        const influencer = influencers && influencers.find((inf) => inf.id === value);
                                         setSelectedInfluencer(influencer || null);
                                     }}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Search and select influencer..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {influencers.map((inf) => (
-                                                <SelectItem key={inf.id} value={inf.id}>{inf.channelName}</SelectItem>
-                                            ))}
+                                            {influencers && influencers.length > 0 ? (
+                                                influencers.map((inf) => (
+                                                    <SelectItem key={inf.id} value={inf.id}>{inf.channelName}</SelectItem>
+                                                ))
+                                            ) : (
+                                                <SelectItem value="no-influencers" disabled>No influencers available</SelectItem>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
