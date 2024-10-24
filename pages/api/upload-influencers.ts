@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 return resolve()
             }
 
-            const file = files.file as formidable.File
+            const file = Array.isArray(files.file) ? files.file[0] : files.file
             if (!file) {
                 res.status(400).json({ message: 'No file uploaded' })
                 return resolve()
