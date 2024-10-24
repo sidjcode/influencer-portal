@@ -24,7 +24,7 @@ interface Influencer {
     id: string;
     channelName: string;
     channelYoutubeId: string;
-    category: string | null;
+    category: string;
     avgViews: number;
     callRequired: boolean;
     engagementRate: number;
@@ -106,7 +106,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
     const [newInfluencer, setNewInfluencer] = useState<Omit<Influencer, 'id' | 'sponsoredVideos'>>({
         channelName: '',
         channelYoutubeId: '',
-        category: '',
+        category: '', // Change this from null to an empty string
         avgViews: 0,
         callRequired: false,
         engagementRate: 0,
@@ -278,7 +278,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
             influencers && influencers.length > 0
                 ? influencers.filter(influencer =>
                     influencer.channelName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (influencer.category?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+                    influencer.category.toLowerCase().includes(searchTerm.toLowerCase())
                 )
                 : [],
         [influencers, searchTerm]
@@ -588,7 +588,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                                     <Input
                                                         id="category"
                                                         name="category"
-                                                        value={newInfluencer.category}
+                                                        value={newInfluencer.category || ''} // Use empty string as fallback
                                                         onChange={handleInputChange}
                                                         placeholder="e.g., Technology, Fashion"
                                                     />
