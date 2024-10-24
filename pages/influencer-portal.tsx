@@ -795,15 +795,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                         {activeTab === "upload" && (
                             <>
                                 <h2 className="text-2xl font-bold mb-4">Upload Influencers</h2>
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Upload Influencers</CardTitle>
-                                        <CardDescription>Upload a CSV file containing influencer data</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
                                         <InfluencerUploader onUploadSuccess={fetchInfluencers} />
-                                    </CardContent>
-                                </Card>
                             </>
                         )}
                     </>
