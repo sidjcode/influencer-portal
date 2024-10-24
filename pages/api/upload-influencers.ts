@@ -1,8 +1,10 @@
-import { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest, NextApiResponse } from 'next'
 import formidable from 'formidable'
 import fs from 'fs'
-import path from 'path'
 import csv from 'csv-parser'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 export const config = {
     api: {
@@ -15,19 +17,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ message: 'Method not allowed' })
     }
 
-    const uploadDir = path.join(process.cwd(), 'uploads')
+    const form = new formidable.IncomingForm()
 
-    if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true })
-    }
-
-    const form = formidable({
-        uploadDir: uploadDir,
-        keepExtensions: true,
-        maxFileSize: 10 * 1024 * 1024, // 10MB limit
-    })
-
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
         form.parse(req, async (err, fields, files) => {
             if (err) {
                 console.error('Error parsing form:', err)
@@ -36,33 +28,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
 
             const file = files.file as formidable.File
-            if (!file || !file[0]) {
+            if (!file) {
                 res.status(400).json({ message: 'No file uploaded' })
                 return resolve()
             }
 
-            const filePath = file[0].filepath
-            const fileName = file[0].originalFilename || 'uploaded_file.csv'
-            const newPath = path.join(uploadDir, fileName)
-
-            fs.renameSync(filePath, newPath)
-
             const results: any[] = []
 
-            fs.createReadStream(newPath)
+            fs.createReadStream(file.filepath)
                 .pipe(csv())
                 .on('data', (data) => results.push(data))
-                .on('end', () => {
-                    res.status(200).json({
-                        message: 'File uploaded successfully',
-                        data: results,
-                        fileName: fileName
-                    })
-                    resolve()
-                })
-                .on('error', (error) => {
-                    console.error('Error parsing CSV:', error)
-                    res.status(500).json({ message: 'Error parsing CSV file' })
+                .on('end', async () => {
+                    try {
+                        for (const influencer of results) {
+                            await prisma.influencer.create({
+                                data: {
+                                    channelName: influencer.channelName,
+                                    channelYoutubeId: influencer.channelYoutubeId,
+                                    category: influencer.category,
+                                    avgViews: parseInt(influencer.avgViews),
+                                    callRequired: influencer.callRequired === 'true',
+                                    engagementRate: parseFloat(influencer.engagementRate),
+                                    topCountriesProportion: parseFloat(influencer.topCountriesProportion),
+                                    richCountriesFollowers: parseInt(influencer.richCountriesFollowers),
+                                    maleFollowers: parseFloat(influencer.maleFollowers),
+                                    followerGrowthRate: parseFloat(influencer.followerGrowthRate),
+                                    englishSpeakingFollowers: parseInt(influencer.englishSpeakingFollowers),
+                                    trackingUrl: influencer.trackingUrl,
+                                },
+                            })
+                        }
+                        res.status(200).json({ message: 'Influencers uploaded successfully' })
+                    } catch (error) {
+                        console.error('Error uploading influencers:', error)
+                        res.status(500).json({ message: 'Error uploading influencers' })
+                    }
                     resolve()
                 })
         })
