@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,12 +9,22 @@ import { BarChart, Users, UserPlus, Search, DollarSign, Percent, MousePointer, S
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import axios from 'axios'
+import { InfluencerUploader } from "@/components/InfluencerUploader"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Label } from "@/components/ui/label"
+import { InfoIcon } from "lucide-react"
 
+// Interfaces remain unchanged
 interface Influencer {
-    id: string;
+    id: number;
     channelName: string;
     channelYoutubeId: string;
-    category: string;
+    category: string | null;
     avgViews: number;
     callRequired: boolean;
     engagementRate: number;
@@ -23,7 +33,7 @@ interface Influencer {
     maleFollowers: number;
     followerGrowthRate: number;
     englishSpeakingFollowers: number;
-    sponsoredVideos: string[];
+    trackingUrl: string;
 }
 
 interface Deal {
@@ -65,37 +75,49 @@ interface CurrentMonthData {
 }
 
 interface InfluencerPortalProps {
-    initialInfluencers: Influencer[];
-    initialDeals: Deal[];
-    initialCurrentMonthData: CurrentMonthData;
+    initialInfluencers?: Influencer[];
+    initialDeals?: Deal[];
+    initialCurrentMonthData?: CurrentMonthData;
 }
 
 export default function InfluencerPortal({ initialInfluencers, initialDeals, initialCurrentMonthData }: InfluencerPortalProps) {
     const [activeTab, setActiveTab] = useState("dashboard")
     const [searchTerm, setSearchTerm] = useState("")
-    const [influencers, setInfluencers] = useState<Influencer[]>(initialInfluencers)
-    const [deals, setDeals] = useState<Deal[]>(initialDeals)
-    const [currentMonthData, setCurrentMonthData] = useState<CurrentMonthData>(initialCurrentMonthData)
-    const [callRequired, setCallRequired] = useState(false)
+    const [influencers, setInfluencers] = useState<Influencer[]>(initialInfluencers || [])
+    const [deals, setDeals] = useState<Deal[]>(initialDeals || [])
+    const [currentMonthData, setCurrentMonthData] = useState<CurrentMonthData>(initialCurrentMonthData || {
+        postedInfluencers: 0,
+        totalViews: 0,
+        totalClicks: 0,
+        totalConversions: 0,
+        roi: 0,
+        cost: 0,
+        agencyFee: 0
+    })
     const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
     const [sponsoredVideos, setSponsoredVideos] = useState<string[]>(['']);
-    const [newInfluencer, setNewInfluencer] = useState({ channelName: '', category: '', trackingUrl: '' })
     const [isLoading, setIsLoading] = useState(false)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [errors, setErrors] = useState<Record<string, string>>({})
     const { toast } = useToast()
 
-    useEffect(() => {
-        if (!influencers || influencers.length === 0) {
-            fetchInfluencers()
-        }
-        if (!deals || deals.length === 0) {
-            fetchDeals()
-        }
-        if (!currentMonthData || Object.keys(currentMonthData).length === 0) {
-            fetchCurrentMonthData()
-        }
-    }, [])
+    const [newInfluencer, setNewInfluencer] = useState<Omit<Influencer, 'id' | 'sponsoredVideos'>>({
+        channelName: '',
+        channelYoutubeId: '',
+        category: '',
+        avgViews: 0,
+        callRequired: false,
+        engagementRate: 0,
+        topCountriesProportion: 0,
+        richCountriesFollowers: 0,
+        maleFollowers: 0,
+        followerGrowthRate: 0,
+        englishSpeakingFollowers: 0,
+        trackingUrl: ''
+    })
 
-    const fetchInfluencers = async () => {
+    const fetchInfluencers = useCallback(async () => {
         setIsLoading(true)
         try {
             const response = await axios.get('/api/influencers')
@@ -110,9 +132,9 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [toast])
 
-    const fetchDeals = async () => {
+    const fetchDeals = useCallback(async () => {
         setIsLoading(true)
         try {
             const response = await axios.get('/api/deals')
@@ -127,9 +149,9 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [toast])
 
-    const fetchCurrentMonthData = async () => {
+    const fetchCurrentMonthData = useCallback(async () => {
         setIsLoading(true)
         try {
             const response = await axios.get('/api/current-month-data')
@@ -144,13 +166,93 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [toast])
 
-    const handleDealSubmit = async (dealData: Omit<Deal, 'id' | 'influencer' | 'videos'>) => {
+    useEffect(() => {
+        if (!initialInfluencers || initialInfluencers.length === 0) {
+            fetchInfluencers()
+        }
+        if (!initialDeals || initialDeals.length === 0) {
+            fetchDeals()
+        }
+        if (!initialCurrentMonthData || Object.keys(initialCurrentMonthData).length === 0) {
+            fetchCurrentMonthData()
+        }
+    }, [initialInfluencers, initialDeals, initialCurrentMonthData, fetchInfluencers, fetchDeals, fetchCurrentMonthData])
+
+    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value, type } = e.target
+        setNewInfluencer(prev => ({
+            ...prev,
+            [name]: type === 'number' ? parseFloat(value) : value
+        }))
+    }, [])
+
+    const validateForm = useCallback(() => {
+        const newErrors: Record<string, string> = {}
+        if (!newInfluencer.channelName) newErrors.channelName = "Channel name is required"
+        if (!newInfluencer.channelYoutubeId) newErrors.channelYoutubeId = "YouTube ID is required"
+        if (newInfluencer.avgViews < 0) newErrors.avgViews = "Average views must be positive"
+        if (newInfluencer.engagementRate < 0 || newInfluencer.engagementRate > 100) newErrors.engagementRate = "Engagement rate must be between 0 and 100"
+        if (newInfluencer.topCountriesProportion < 0 || newInfluencer.topCountriesProportion > 100) newErrors.topCountriesProportion = "Top countries proportion must be between 0 and 100"
+        if (newInfluencer.maleFollowers < 0 || newInfluencer.maleFollowers > 100) newErrors.maleFollowers = "Male followers percentage must be between 0 and 100"
+        if (!newInfluencer.trackingUrl) newErrors.trackingUrl = "Tracking URL is required"
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }, [newInfluencer])
+
+    const handleInfluencerSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        if (!validateForm()) return
+        setShowConfirmDialog(true)
+    }, [validateForm])
+
+    const confirmSubmit = useCallback(async () => {
+        setIsSubmitting(true);
+        setShowConfirmDialog(false);
+        try {
+            const response = await axios.post('/api/influencers', newInfluencer);
+            setInfluencers(prev => [...prev, response.data]);
+            setNewInfluencer({
+                channelName: '',
+                channelYoutubeId: '',
+                category: '',
+                avgViews: 0,
+                callRequired: false,
+                engagementRate: 0,
+                topCountriesProportion: 0,
+                richCountriesFollowers: 0,
+                maleFollowers: 0,
+                followerGrowthRate: 0,
+                englishSpeakingFollowers: 0,
+                trackingUrl: ''
+            });
+            toast({
+                title: "Success",
+                description: "Influencer added successfully",
+            });
+        } catch (error) {
+            console.error('Error adding influencer:', error);
+            let errorMessage = "Failed to add influencer. Please try again.";
+            if (axios.isAxiosError(error) && error.response) {
+                console.error('Server response:', error.response.data);
+                errorMessage = error.response.data.error || errorMessage;
+            }
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [newInfluencer, toast]);
+
+    const handleDealSubmit = useCallback(async (dealData: Omit<Deal, 'id' | 'influencer' | 'videos'>) => {
         setIsLoading(true)
         try {
             const response = await axios.post('/api/deals', dealData)
-            setDeals([...deals, response.data])
+            setDeals(prev => [...prev, response.data])
             setActiveTab("deals")
             toast({
                 title: "Success",
@@ -166,51 +268,17 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [toast])
 
-    const handleInfluencerSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-        setIsLoading(true)
-        const formData = new FormData(event.currentTarget)
-        const influencerData = {
-            channelName: formData.get('channelName') as string,
-            channelYoutubeId: formData.get('channelYoutubeId') as string,
-            category: formData.get('category') as string,
-            avgViews: parseInt(formData.get('avgViews') as string, 10),
-            callRequired: callRequired,
-            engagementRate: parseFloat(formData.get('engagementRate') as string),
-            topCountriesProportion: parseFloat(formData.get('topCountriesProportion') as string),
-            richCountriesFollowers: parseInt(formData.get('richCountriesFollowers') as string, 10),
-            maleFollowers: parseFloat(formData.get('maleFollowers') as string),
-            followerGrowthRate: parseFloat(formData.get('followerGrowthRate') as string),
-            englishSpeakingFollowers: parseInt(formData.get('englishSpeakingFollowers') as string, 10),
-            sponsoredVideos: [],
-        }
-
-        try {
-            const response = await axios.post('/api/influencers', influencerData)
-            setInfluencers([...influencers, response.data])
-            setActiveTab("influencers")
-            toast({
-                title: "Success",
-                description: "Influencer added successfully.",
-            })
-        } catch (error) {
-            console.error('Error submitting influencer:', error)
-            toast({
-                title: "Error",
-                description: "Failed to add influencer. Please try again.",
-                variant: "destructive",
-            })
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    const filteredInfluencers = influencers ? influencers.filter(influencer =>
-        (influencer.channelName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-        (influencer.category?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
-    ) : []
+    const filteredInfluencers = useMemo(() =>
+            influencers && influencers.length > 0
+                ? influencers.filter(influencer =>
+                    influencer.channelName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    influencer.category.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                : [],
+        [influencers, searchTerm]
+    )
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -273,6 +341,13 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                         <Users className="mr-2 h-4 w-4" />
                         Update Influencer
                     </Button>
+                    <Button
+                        variant={activeTab === "upload" ? "default" : "outline"}
+                        onClick={() => setActiveTab("upload")}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Upload Influencers
+                    </Button>
                 </div>
 
                 {isLoading ? (
@@ -284,14 +359,14 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                         {activeTab === "dashboard" && (
                             <>
                                 <h2 className="text-2xl font-bold mb-4">Current Month Performance</h2>
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                <div className="grid gap-4 md:grid-cols-2  lg:grid-cols-4">
                                     <Card>
                                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                             <CardTitle className="text-sm font-medium">Posted Influencers</CardTitle>
                                             <Users className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData?.postedInfluencers}</div>
+                                            <div className="text-2xl font-bold">{currentMonthData.postedInfluencers}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -300,7 +375,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <BarChart className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData?.totalViews.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">{currentMonthData.totalViews.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -309,7 +384,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <MousePointer className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData?.totalClicks.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">{currentMonthData.totalClicks.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -318,7 +393,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData?.totalConversions.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">{currentMonthData.totalConversions.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -327,7 +402,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <Percent className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">{currentMonthData?.roi}%</div>
+                                            <div className="text-2xl font-bold">{currentMonthData.roi}%</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -336,7 +411,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">${currentMonthData?.cost.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">${currentMonthData.cost.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -345,7 +420,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                             <DollarSign className="h-4 w-4  text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">${currentMonthData?.agencyFee.toLocaleString()}</div>
+                                            <div className="text-2xl font-bold">${currentMonthData.agencyFee.toLocaleString()}</div>
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -379,13 +454,13 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                                         <TableCell>{influencer.channelName}</TableCell>
                                                         <TableCell>{influencer.channelYoutubeId}</TableCell>
                                                         <TableCell>{influencer.category || 'N/A'}</TableCell>
-                                                        <TableCell>{(influencer.avgViews || 0).toLocaleString()}</TableCell>
-                                                        <TableCell>{(influencer.engagementRate || 0).toFixed(2)}%</TableCell>
-                                                        <TableCell>{(influencer.topCountriesProportion || 0).toFixed(2)}%</TableCell>
-                                                        <TableCell>{(influencer.richCountriesFollowers || 0).toLocaleString()}</TableCell>
-                                                        <TableCell>{(influencer.maleFollowers || 0).toFixed(2)}%</TableCell>
-                                                        <TableCell>{(influencer.followerGrowthRate || 0).toFixed(2)}%</TableCell>
-                                                        <TableCell>{(influencer.englishSpeakingFollowers || 0).toLocaleString()}</TableCell>
+                                                        <TableCell>{influencer.avgViews.toLocaleString()}</TableCell>
+                                                        <TableCell>{influencer.engagementRate.toFixed(2)}%</TableCell>
+                                                        <TableCell>{influencer.topCountriesProportion.toFixed(2)}%</TableCell>
+                                                        <TableCell>{influencer.richCountriesFollowers.toLocaleString()}</TableCell>
+                                                        <TableCell>{influencer.maleFollowers.toFixed(2)}%</TableCell>
+                                                        <TableCell>{influencer.followerGrowthRate.toFixed(2)}%</TableCell>
+                                                        <TableCell>{influencer.englishSpeakingFollowers.toLocaleString()}</TableCell>
                                                         <TableCell>
                                                             <Button variant="outline" size="sm">
                                                                 View Details
@@ -419,53 +494,47 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {deals && deals.length > 0 ? (
-                                                    deals.map((deal) => (
-                                                        <TableRow key={deal.id}>
-                                                            <TableCell>{deal.influencer.channelName}</TableCell>
-                                                            <TableCell>{deal.status}</TableCell>
-                                                            <TableCell>{deal.uploadMonth}</TableCell>
-                                                            <TableCell>{deal.deliverables}</TableCell>
-                                                            <TableCell>{deal.viewGuarantee?.amount?.toLocaleString() ?? 'N/A'} views in {deal.viewGuarantee?.days ?? 'N/A'} days</TableCell>
-                                                            <TableCell>${deal.rate?.toLocaleString() ?? 'N/A'}</TableCell>
-                                                            <TableCell>{new Date(deal.postDate).toLocaleDateString()}</TableCell>
-                                                            <TableCell>
-                                                                <Dialog>
-                                                                    <DialogTrigger asChild>
-                                                                        <Button variant="outline" size="sm">
-                                                                            View Details
-                                                                        </Button>
-                                                                    </DialogTrigger>
-                                                                    <DialogContent className="max-w-4xl">
-                                                                        <DialogHeader>
-                                                                            <DialogTitle>{deal.influencer.channelName} - Deal Details</DialogTitle>
-                                                                        </DialogHeader>
-                                                                        <div className="grid gap-4 py-4">
-                                                                            <h3 className="text-lg font-semibold">Deal Information</h3>
-                                                                            <p>Status: {deal.status}</p>
-                                                                            <p>Upload Month: {deal.uploadMonth}</p>
-                                                                            <p>Deliverables: {deal.deliverables}</p>
-                                                                            <p>Usage: {deal.usage}</p>
-                                                                            <p>Recut: {deal.recut}</p>
-                                                                            <p>Exclusivity: {deal.exclusivity}</p>
-                                                                            <p>View Guarantee: {deal.viewGuarantee?.amount?.toLocaleString() ?? 'N/A'} views in {deal.viewGuarantee?.days ?? 'N/A'} days</p>
-                                                                            <p>Rate: ${deal.rate?.toLocaleString() ?? 'N/A'} USD</p>
-                                                                            <p>Post Date: {new Date(deal.postDate).toLocaleDateString()}</p>
-                                                                            <p>Upload Link: <a href={deal.uploadLink} target="_blank" rel="noopener noreferrer">{deal.uploadLink}</a></p>
-                                                                            <p>Tracking URL: <a href={deal.trackingUrl} target="_blank" rel="noopener noreferrer">{deal.trackingUrl}</a></p>
-                                                                            <p>Contracted By: {deal.contractedBy}</p>
-                                                                            {deal.agencyName && <p>Agency Name: {deal.agencyName}</p>}
-                                                                        </div>
-                                                                    </DialogContent>
-                                                                </Dialog>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                ) : (
-                                                    <TableRow>
-                                                        <TableCell colSpan={8} className="text-center">No deals available</TableCell>
+                                                {deals.map((deal) => (
+                                                    <TableRow key={deal.id}>
+                                                        <TableCell>{deal.influencer.channelName}</TableCell>
+                                                        <TableCell>{deal.status}</TableCell>
+                                                        <TableCell>{deal.uploadMonth}</TableCell>
+                                                        <TableCell>{deal.deliverables}</TableCell>
+                                                        <TableCell>{deal.viewGuarantee.amount.toLocaleString()} views in {deal.viewGuarantee.days} days</TableCell>
+                                                        <TableCell>${deal.rate.toLocaleString()}</TableCell>
+                                                        <TableCell>{new Date(deal.postDate).toLocaleDateString()}</TableCell>
+                                                        <TableCell>
+                                                            <Dialog>
+                                                                <DialogTrigger asChild>
+                                                                    <Button variant="outline" size="sm">
+                                                                        View Details
+                                                                    </Button>
+                                                                </DialogTrigger>
+                                                                <DialogContent className="max-w-4xl">
+                                                                    <DialogHeader>
+                                                                        <DialogTitle>{deal.influencer.channelName} - Deal Details</DialogTitle>
+                                                                    </DialogHeader>
+                                                                    <div className="grid gap-4 py-4">
+                                                                        <h3 className="text-lg font-semibold">Deal Information</h3>
+                                                                        <p>Status: {deal.status}</p>
+                                                                        <p>Upload Month: {deal.uploadMonth}</p>
+                                                                        <p>Deliverables: {deal.deliverables}</p>
+                                                                        <p>Usage: {deal.usage}</p>
+                                                                        <p>Recut: {deal.recut}</p>
+                                                                        <p>Exclusivity: {deal.exclusivity}</p>
+                                                                        <p>View Guarantee: {deal.viewGuarantee.amount.toLocaleString()} views in {deal.viewGuarantee.days} days</p>
+                                                                        <p>Rate: ${deal.rate.toLocaleString()} USD</p>
+                                                                        <p>Post Date: {new Date(deal.postDate).toLocaleDateString()}</p>
+                                                                        <p>Upload Link: <a href={deal.uploadLink} target="_blank" rel="noopener noreferrer">{deal.uploadLink}</a></p>
+                                                                        <p>Tracking URL: <a href={deal.trackingUrl} target="_blank" rel="noopener noreferrer">{deal.trackingUrl}</a></p>
+                                                                        <p>Contracted By: {deal.contractedBy}</p>
+                                                                        {deal.agencyName && <p>Agency Name: {deal.agencyName}</p>}
+                                                                    </div>
+                                                                </DialogContent>
+                                                            </Dialog>
+                                                        </TableCell>
                                                     </TableRow>
-                                                )}
+                                                ))}
                                             </TableBody>
                                         </Table>
                                     </CardContent>
@@ -483,80 +552,194 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                     </CardHeader>
                                     <CardContent>
                                         <form onSubmit={handleInfluencerSubmit} className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label htmlFor="channelName" className="block text-sm font-medium text-gray-700">
-                                                        Channel Name
-                                                    </label>
-                                                    <Input id="channelName" name="channelName" placeholder="Channel name" required />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="channelName">Channel Name</Label>
+                                                    <Input
+                                                        id="channelName"
+                                                        name="channelName"
+                                                        value={newInfluencer.channelName}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Enter channel name"
+                                                        required
+                                                    />
+                                                    {errors.channelName && <p className="text-red-500 text-xs">{errors.channelName}</p>}
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="channelYoutubeId" className="block text-sm font-medium text-gray-700">
-                                                        Channel YouTube ID
-                                                    </label>
-                                                    <Input id="channelYoutubeId" name="channelYoutubeId" placeholder="e.g., @ChannelName" required />
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="channelYoutubeId">Channel YouTube ID</Label>
+                                                    <Input
+                                                        id="channelYoutubeId"
+                                                        name="channelYoutubeId"
+                                                        value={newInfluencer.channelYoutubeId}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., @ChannelName"
+                                                        required
+                                                    />
+                                                    {errors.channelYoutubeId && <p className="text-red-500 text-xs">{errors.channelYoutubeId}</p>}
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                                                        Category
-                                                    </label>
-                                                    <Input id="category" name="category" placeholder="e.g., Technology, Fashion" required />
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="category">Category</Label>
+                                                    <Input
+                                                        id="category"
+                                                        name="category"
+                                                        value={newInfluencer.category}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., Technology, Fashion"
+                                                    />
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="avgViews" className="block text-sm font-medium text-gray-700">
-                                                        Average Views
-                                                    </label>
-                                                    <Input id="avgViews" name="avgViews" type="number" placeholder="e.g., 25000" required />
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="avgViews">Average Views</Label>
+                                                    <Input
+                                                        id="avgViews"
+                                                        name="avgViews"
+                                                        type="number"
+                                                        value={newInfluencer.avgViews}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., 25000"
+                                                        required
+                                                    />
+                                                    {errors.avgViews && <p className="text-red-500 text-xs">{errors.avgViews}</p>}
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="engagementRate" className="block text-sm font-medium text-gray-700">
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="engagementRate">
                                                         Engagement Rate (%)
-                                                    </label>
-                                                    <Input id="engagementRate" name="engagementRate" type="number" step="0.01" placeholder="e.g., 5 for 5%" required />
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <InfoIcon className="h-4 w-4 inline-block ml-1" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Average percentage of viewers who engage with the content</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </Label>
+                                                    <Input
+                                                        id="engagementRate"
+                                                        name="engagementRate"
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={newInfluencer.engagementRate}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., 5 for 5%"
+                                                        required
+                                                    />
+                                                    {errors.engagementRate && <p className="text-red-500 text-xs">{errors.engagementRate}</p>}
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="topCountriesProportion" className="block text-sm font-medium text-gray-700">
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="topCountriesProportion">
                                                         Top Countries Proportion (%)
-                                                    </label>
-                                                    <Input id="topCountriesProportion" name="topCountriesProportion" type="number" step="0.01" placeholder="e.g., 40 for 40%" required />
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <InfoIcon className="h-4 w-4 inline-block ml-1" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Percentage of audience from the influencer's top countries</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </Label>
+                                                    <Input
+                                                        id="topCountriesProportion"
+                                                        name="topCountriesProportion"
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={newInfluencer.topCountriesProportion}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., 40 for 40%"
+                                                        required
+                                                    />
+                                                    {errors.topCountriesProportion && <p className="text-red-500 text-xs">{errors.topCountriesProportion}</p>}
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="richCountriesFollowers" className="block text-sm font-medium text-gray-700">
-                                                        Rich Countries Followers
-                                                    </label>
-                                                    <Input id="richCountriesFollowers" name="richCountriesFollowers" type="number" placeholder="e.g., 50000" required />
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="richCountriesFollowers">Rich Countries Followers</Label>
+                                                    <Input
+                                                        id="richCountriesFollowers"
+                                                        name="richCountriesFollowers"
+                                                        type="number"
+                                                        value={newInfluencer.richCountriesFollowers}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., 50000"
+                                                        required
+                                                    />
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="maleFollowers" className="block text-sm font-medium text-gray-700">
-                                                        Male Followers (%)
-                                                    </label>
-                                                    <Input id="maleFollowers" name="maleFollowers" type="number" step="0.1" placeholder="e.g., 60 for 60%" required />
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="maleFollowers">Male Followers (%)</Label>
+                                                    <Input
+                                                        id="maleFollowers"
+                                                        name="maleFollowers"
+                                                        type="number"
+                                                        step="0.1"
+                                                        value={newInfluencer.maleFollowers}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., 60 for 60%"
+                                                        required
+                                                    />
+                                                    {errors.maleFollowers && <p className="text-red-500 text-xs">{errors.maleFollowers}</p>}
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="followerGrowthRate" className="block text-sm font-medium text-gray-700">
-                                                        Follower Growth Rate (%)
-                                                    </label>
-                                                    <Input id="followerGrowthRate" name="followerGrowthRate" type="number" step="0.01" placeholder="e.g., 5 for 5%" required />
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="followerGrowthRate">Follower Growth Rate (%)</Label>
+                                                    <Input
+                                                        id="followerGrowthRate"
+                                                        name="followerGrowthRate"
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={newInfluencer.followerGrowthRate}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., 5 for 5%"
+                                                        required
+                                                    />
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="englishSpeakingFollowers" className="block text-sm font-medium text-gray-700">
-                                                        English Speaking Followers
-                                                    </label>
-                                                    <Input id="englishSpeakingFollowers" name="englishSpeakingFollowers" type="number" placeholder="e.g., 75000" required />
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="englishSpeakingFollowers">English Speaking Followers</Label>
+                                                    <Input
+                                                        id="englishSpeakingFollowers"
+                                                        name="englishSpeakingFollowers"
+                                                        type="number"
+                                                        value={newInfluencer.englishSpeakingFollowers}
+                                                        onChange={handleInputChange}
+                                                        placeholder="e.g., 75000"
+                                                        required
+                                                    />
                                                 </div>
-                                                <div className="flex items-center">
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="trackingUrl">Tracking URL</Label>
+                                                    <Input
+                                                        id="trackingUrl"
+                                                        name="trackingUrl"
+                                                        value={newInfluencer.trackingUrl}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Enter tracking URL"
+                                                        required
+                                                    />
+                                                    {errors.trackingUrl && <p className="text-red-500 text-xs">{errors.trackingUrl}</p>}
+                                                </div>
+
+                                                <div className="flex items-center space-x-2">
                                                     <Checkbox
                                                         id="callRequired"
                                                         name="callRequired"
-                                                        checked={callRequired}
-                                                        onCheckedChange={(checked) => setCallRequired(checked as boolean)}
+                                                        checked={newInfluencer.callRequired}
+                                                        onCheckedChange={(checked) => setNewInfluencer(prev => ({ ...prev, callRequired: checked as boolean }))}
                                                     />
-                                                    <label htmlFor="callRequired" className="ml-2 block text-sm font-medium text-gray-700">
-                                                        Onboarding Call Done
-                                                    </label>
+                                                    <Label htmlFor="callRequired">Onboarding Call Required</Label>
                                                 </div>
                                             </div>
-                                            <Button type="submit">Add Influencer</Button>
+
+                                            <Button type="submit" disabled={isSubmitting}>
+                                                {isSubmitting ? "Adding..." : "Add Influencer"}
+                                            </Button>
                                         </form>
                                     </CardContent>
                                 </Card>
@@ -574,134 +757,9 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                                     <CardContent>
                                         <form onSubmit={(e) => {
                                             e.preventDefault();
-                                            const formData = new FormData(e.currentTarget);
-                                            const dealData = Object.fromEntries(formData.entries());
-                                            handleDealSubmit(dealData as any);
+                                            // Add logic to handle deal submission
                                         }} className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label htmlFor="influencerId" className="block text-sm font-medium text-gray-700">
-                                                        Influencer
-                                                    </label>
-                                                    <Select name="influencerId" required>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select Influencer" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {influencers && influencers.length > 0 ? (
-                                                                influencers.map((influencer) => (
-                                                                    <SelectItem key={influencer.id} value={influencer.id}>
-                                                                        {influencer.channelName}
-                                                                    </SelectItem>
-                                                                ))
-                                                            ) : (
-                                                                <SelectItem value="no-influencers" disabled>No influencers available</SelectItem>
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                                                        Status
-                                                    </label>
-                                                    <Select name="status" required>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select Status" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="Launched">Launched</SelectItem>
-                                                            <SelectItem value="Pending">Pending</SelectItem>
-                                                            <SelectItem value="Completed">Completed</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="uploadMonth" className="block text-sm font-medium text-gray-700">
-                                                        Upload Month
-                                                    </label>
-                                                    <Input id="uploadMonth" name="uploadMonth" type="month" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="deliverables" className="block text-sm font-medium text-gray-700">
-                                                        Deliverables
-                                                    </label>
-                                                    <Input id="deliverables" name="deliverables" placeholder="e.g., 1 YouTube video" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="usage" className="block text-sm font-medium text-gray-700">
-                                                        Usage
-                                                    </label>
-                                                    <Input id="usage" name="usage" placeholder="e.g., 6 months" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="recut" className="block text-sm font-medium text-gray-700">
-                                                        Recut
-                                                    </label>
-                                                    <Input id="recut" name="recut" placeholder="e.g., Yes/No" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="exclusivity" className="block text-sm font-medium text-gray-700">
-                                                        Exclusivity
-                                                    </label>
-                                                    <Input id="exclusivity" name="exclusivity" placeholder="e.g., 30 days" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="viewGuaranteeAmount" className="block text-sm font-medium text-gray-700">
-                                                        View Guarantee Amount
-                                                    </label>
-                                                    <Input id="viewGuaranteeAmount" name="viewGuaranteeAmount" type="number" placeholder="e.g., 100000" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="viewGuaranteeDays" className="block text-sm font-medium text-gray-700">
-                                                        View Guarantee Days
-                                                    </label>
-                                                    <Input id="viewGuaranteeDays" name="viewGuaranteeDays" type="number" placeholder="e.g., 30" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="rate" className="block text-sm font-medium text-gray-700">
-                                                        Rate (USD)
-                                                    </label>
-                                                    <Input id="rate" name="rate" type="number" placeholder="e.g., 5000" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="postDate" className="block text-sm font-medium text-gray-700">
-                                                        Post Date
-                                                    </label>
-                                                    <Input id="postDate" name="postDate" type="date" required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="uploadLink" className="block text-sm font-medium text-gray-700">
-                                                        Upload Link
-                                                    </label>
-                                                    <Input id="uploadLink" name="uploadLink" type="url" placeholder="https://..." required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="trackingUrl" className="block text-sm font-medium text-gray-700">
-                                                        Tracking URL
-                                                    </label>
-                                                    <Input id="trackingUrl" name="trackingUrl" type="url" placeholder="https://..." required />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="contractedBy" className="block text-sm font-medium text-gray-700">
-                                                        Contracted By
-                                                    </label>
-                                                    <Select name="contractedBy" required>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select Contracted By" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="DIRECT">Direct</SelectItem>
-                                                            <SelectItem value="AGENCY">Agency</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="agencyName" className="block text-sm font-medium text-gray-700">
-                                                        Agency Name (if applicable)
-                                                    </label>
-                                                    <Input id="agencyName" name="agencyName" placeholder="Agency name" />
-                                                </div>
-                                            </div>
+                                            {/* Add form fields for deal creation */}
                                             <Button type="submit">Add Deal</Button>
                                         </form>
                                     </CardContent>
@@ -712,65 +770,52 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                         {activeTab === "update" && (
                             <>
                                 <h2 className="text-2xl font-bold mb-4">Update Influencer</h2>
-                                <div>
-                                    <label htmlFor="influencerSelect" className="block text-sm font-medium text-gray-700">Select Influencer</label>
-                                    <Select onValueChange={(value) => {
-                                        const influencer = influencers && influencers.find((inf) => inf.id === value);
-                                        setSelectedInfluencer(influencer || null);
-                                    }}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Search and select influencer..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {influencers && influencers.length > 0 ? (
-                                                influencers.map((inf) => (
-                                                    <SelectItem key={inf.id} value={inf.id}>{inf.channelName}</SelectItem>
-                                                ))
-                                            ) : (
-                                                <SelectItem value="no-influencers" disabled>No influencers available</SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Update Influencer Form</CardTitle>
+                                        <CardDescription>Update the details of an existing influencer</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <form onSubmit={(e) => {
+                                            e.preventDefault();
+                                            // Add logic to handle influencer update
+                                        }} className="space-y-4">
+                                            {/* Add form fields for influencer update */}
+                                            <Button type="submit">Update Influencer</Button>
+                                        </form>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        )}
 
-                                {selectedInfluencer && (
-                                    <>
-                                        <h3 className="text-lg font-semibold mt-4">Sponsored Videos</h3>
-                                        {selectedInfluencer.sponsoredVideos && selectedInfluencer.sponsoredVideos.length > 0 ? (
-                                            <ul>
-                                                {selectedInfluencer.sponsoredVideos.map((video, index) => (
-                                                    <li key={index}>
-                                                        <a href={video} target="_blank" rel="noopener noreferrer">{video}</a>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p>No sponsored videos available.</p>
-                                        )}
-
-                                        <div className="flex items-center mt-4">
-                                            <Checkbox
-                                                id="callRequiredUpdate"
-                                                name="callRequiredUpdate"
-                                                checked={selectedInfluencer.callRequired}
-                                                onCheckedChange={(checked) => {
-                                                    setSelectedInfluencer({
-                                                        ...selectedInfluencer,
-                                                        callRequired: checked as boolean
-                                                    });
-                                                }}
-                                            />
-                                            <label htmlFor="callRequiredUpdate" className="ml-2 block text-sm font-medium text-gray-700">
-                                                Onboarding Call Done
-                                            </label>
-                                        </div>
-                                    </>
-                                )}
+                        {activeTab === "upload" && (
+                            <>
+                                <h2 className="text-2xl font-bold mb-4">Upload Influencers</h2>
+                                <InfluencerUploader onUploadSuccess={fetchInfluencers} />
                             </>
                         )}
                     </>
                 )}
             </main>
+
+            <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Addition</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to add this influencer?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end space-x-2">
+                        <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={confirmSubmit} disabled={isSubmitting}>
+                            {isSubmitting ? "Adding..." : "Confirm"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

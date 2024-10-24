@@ -8,22 +8,31 @@ generator client {
 }
 
 model Influencer {
-  id           Int     @id @default(autoincrement())
-  channelName  String  @unique
-  category     String?
-  trackingUrl  String  @unique
-  deals        Deal[]
-  videos       Video[]
-  clicks       Click[]
+  id                       Int     @id @default(autoincrement())
+  channelName              String  @unique
+  channelYoutubeId         String
+  category                 String?
+  avgViews                 Int
+  callRequired             Boolean
+  engagementRate           Float
+  topCountriesProportion   Float
+  richCountriesFollowers   Int
+  maleFollowers            Float
+  followerGrowthRate       Float
+  englishSpeakingFollowers Int
+  trackingUrl              String  @unique
+  deals                    Deal[]
+  videos                   Video[]
+  clicks                   Click[]
 }
 
 model Deal {
   id                Int        @id @default(autoincrement())
   influencer        Influencer @relation(fields: [influencerId], references: [id])
   influencerId      Int
-  contractedBy      String     // Changed from enum to String
+  contractedBy      String
   agencyName        String?
-  pricingType       String     // Changed from enum to String
+  pricingType       String
   fixedCost         Float?
   cpm               Float?
   priceCeiling      Float?
@@ -34,15 +43,15 @@ model Deal {
 }
 
 model Video {
-  id           Int        @id @default(autoincrement())
-  youtubeId    String     @unique
+  id           Int         @id @default(autoincrement())
+  youtubeId    String      @unique
   title        String
   views        Int?
   likes        Int?
   comments     Int?
-  influencer   Influencer @relation(fields: [influencerId], references: [id])
+  influencer   Influencer  @relation(fields: [influencerId], references: [id])
   influencerId Int
-  deal         Deal?      @relation(fields: [dealId], references: [id])
+  deal         Deal?       @relation(fields: [dealId], references: [id])
   dealId       Int?
   postDate     DateTime
 }
