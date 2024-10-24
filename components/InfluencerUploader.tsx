@@ -1,12 +1,20 @@
 import React, { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Upload, FileText, AlertCircle } from 'lucide-react'
 import axios from 'axios'
 
-export function InfluencerUploader() {
+interface InfluencerUploaderProps {
+    onUploadSuccess: () => Promise<void>;
+}
+
+export function InfluencerUploader({ onUploadSuccess }: InfluencerUploaderProps) {
     const [file, setFile] = useState<File | null>(null)
     const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
+    const [isUploading, setIsUploading] = useState(false)
     const { toast } = useToast()
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,6 +33,7 @@ export function InfluencerUploader() {
             return
         }
 
+        setIsUploading(true)
         const formData = new FormData()
         formData.append('file', file)
 
@@ -39,7 +48,7 @@ export function InfluencerUploader() {
                 description: "Influencer dataset uploaded successfully",
             })
             setUploadedFileName(response.data.fileName)
-            console.log(response.data)
+            await onUploadSuccess()
         } catch (error) {
             toast({
                 title: "Error",
@@ -47,6 +56,8 @@ export function InfluencerUploader() {
                 variant: "destructive",
             })
             console.error('Error uploading influencer dataset:', error)
+        } finally {
+            setIsUploading(false)
         }
     }
 
@@ -56,7 +67,6 @@ export function InfluencerUploader() {
         try {
             const response = await axios.get(`/api/get-uploaded-file?fileName=${uploadedFileName}`)
             console.log(response.data.content)
-            // You could display this content in a modal or a new page
             toast({
                 title: "Success",
                 description: "File content logged to console",
@@ -71,14 +81,56 @@ export function InfluencerUploader() {
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-                <Input type="file" onChange={handleFileChange} accept=".csv" />
-                <Button onClick={handleUpload}>Upload Influencers</Button>
-            </div>
-            {uploadedFileName && (
-                <Button onClick={handleViewFile}>View Uploaded File</Button>
-            )}
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Upload Influencer Dataset</CardTitle>
+                <CardDescription>Upload a CSV file containing influencer data</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    <div className="grid w-full max-w-sm items-center gap-1.5">
+                        <Label htmlFor="influencer-file">CSV File</Label>
+                        <Input
+                            id="influencer-file"
+                            type="file"
+                            onChange={handleFileChange}
+                            accept=".csv"
+                        />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Button onClick={handleUpload} disabled={!file || isUploading}>
+                            {isUploading ? (
+                                <>
+                                    <Upload className="mr-2 h-4 w-4 animate-spin" />
+                                    Uploading...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Upload Influencers
+                                </>
+                            )}
+                        </Button>
+                        {uploadedFileName && (
+                            <Button variant="outline" onClick={handleViewFile}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Uploaded File
+                            </Button>
+                        )}
+                    </div>
+                    {file && (
+                        <p className="text-sm text-muted-foreground">
+                            Selected file: {file.name}
+                        </p>
+                    )}
+                    {!file && (
+                        <p className="flex items-center text-sm text-muted-foreground">
+                            <AlertCircle className="mr-2 h-4 w-4" />
+                            No file selected
+                        </p>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
     )
 }
