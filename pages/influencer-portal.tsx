@@ -21,7 +21,7 @@ import { InfoIcon } from "lucide-react"
 
 // Interfaces remain unchanged
 interface Influencer {
-    id: number;
+    id: string;
     channelName: string;
     channelYoutubeId: string;
     category: string | null;
@@ -33,6 +33,7 @@ interface Influencer {
     maleFollowers: number;
     followerGrowthRate: number;
     englishSpeakingFollowers: number;
+    sponsoredVideos: string[];
     trackingUrl: string;
 }
 
@@ -208,11 +209,11 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
     }, [validateForm])
 
     const confirmSubmit = useCallback(async () => {
-        setIsSubmitting(true);
-        setShowConfirmDialog(false);
+        setIsSubmitting(true)
+        setShowConfirmDialog(false)
         try {
-            const response = await axios.post('/api/influencers', newInfluencer);
-            setInfluencers(prev => [...prev, response.data]);
+            const response = await axios.post('/api/influencers', newInfluencer)
+            setInfluencers(prev => [...prev, response.data])
             setNewInfluencer({
                 channelName: '',
                 channelYoutubeId: '',
@@ -226,27 +227,30 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
                 followerGrowthRate: 0,
                 englishSpeakingFollowers: 0,
                 trackingUrl: ''
-            });
+            })
             toast({
                 title: "Success",
                 description: "Influencer added successfully",
-            });
+            })
         } catch (error) {
-            console.error('Error adding influencer:', error);
-            let errorMessage = "Failed to add influencer. Please try again.";
+            console.error('Error adding influencer:', error)
+            let errorMessage = "Failed to add influencer. Please try again."
             if (axios.isAxiosError(error) && error.response) {
-                console.error('Server response:', error.response.data);
-                errorMessage = error.response.data.error || errorMessage;
+                console.error('Server response:', error.response.data)
+                errorMessage = error.response.data.error || errorMessage
+                if (error.response.data.details) {
+                    console.error('Error details:', error.response.data.details)
+                }
             }
             toast({
                 title: "Error",
                 description: errorMessage,
                 variant: "destructive",
-            });
+            })
         } finally {
-            setIsSubmitting(false);
+            setIsSubmitting(false)
         }
-    }, [newInfluencer, toast]);
+    }, [newInfluencer, toast])
 
     const handleDealSubmit = useCallback(async (dealData: Omit<Deal, 'id' | 'influencer' | 'videos'>) => {
         setIsLoading(true)
@@ -274,7 +278,7 @@ export default function InfluencerPortal({ initialInfluencers, initialDeals, ini
             influencers && influencers.length > 0
                 ? influencers.filter(influencer =>
                     influencer.channelName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    influencer.category.toLowerCase().includes(searchTerm.toLowerCase())
+                    (influencer.category?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
                 )
                 : [],
         [influencers, searchTerm]

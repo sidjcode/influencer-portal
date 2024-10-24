@@ -3,7 +3,5 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/influencer-portal": "pages/influencer-portal.js",
-  "/api/influencers": "pages/api/influencers.js",
-  "/api/deals": "pages/api/deals.js"
+  "/influencer-portal": "pages/influencer-portal.js"
 }
