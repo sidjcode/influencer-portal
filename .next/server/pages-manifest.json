@@ -2,9 +2,12 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/influencers": "pages/influencers.js",
+  "/videos": "pages/videos.js",
   "/api/influencers": "pages/api/influencers.js",
+  "/": "pages/index.js",
+  "/dashboard": "pages/dashboard.js",
   "/deals": "pages/deals.js",
+  "/influencers": "pages/influencers.js",
   "/api/deals": "pages/api/deals.js",
-  "/dashboard": "pages/dashboard.js"
+  "/api/videos": "pages/api/videos.js"
 }

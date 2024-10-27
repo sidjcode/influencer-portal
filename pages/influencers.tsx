@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { CheckCircle2 } from "lucide-react"
 
 interface Influencer {
     id?: number;
@@ -41,6 +43,7 @@ export default function Influencers() {
         country: '',
         language: '',
     })
+    const [showConfirmation, setShowConfirmation] = useState(false)
 
     useEffect(() => {
         fetchInfluencers()
@@ -85,6 +88,10 @@ export default function Influencers() {
                     description: `Influencer ${activeForm === 'add' ? 'added' : 'updated'} successfully.`,
                 })
                 fetchInfluencers()
+                if (activeForm === 'add') {
+                    setShowConfirmation(true)
+                    setTimeout(() => setShowConfirmation(false), 5000) // Hide after 5 seconds
+                }
                 setFormData({
                     channelName: '',
                     channelYoutubeId: '',
@@ -146,6 +153,23 @@ export default function Influencers() {
                 </Button>
             </div>
             <AnimatePresence mode="wait">
+                {showConfirmation && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="mb-4"
+                    >
+                        <Alert>
+                            <CheckCircle2 className="h-4 w-4" />
+                            <AlertTitle>Success</AlertTitle>
+                            <AlertDescription>
+                                Influencer has been successfully added.
+                            </AlertDescription>
+                        </Alert>
+                    </motion.div>
+                )}
                 <motion.div
                     key={activeForm}
                     initial={{ opacity: 0, y: 20 }}
