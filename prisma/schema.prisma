@@ -1,6 +1,6 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -13,25 +13,33 @@ model Influencer {
   channelYoutubeId         String
   category                 String?
   avgViews                 Int
-  callRequired             Boolean
   engagementRate           Float
   topCountriesProportion   Float
   richCountriesFollowers   Int
   maleFollowers            Float
   followerGrowthRate       Float
   englishSpeakingFollowers Int
-  trackingUrl              String  @unique
+  country                  String
+  language                 String
   deals                    Deal[]
   videos                   Video[]
-  clicks                   Click[]
+}
+
+model Agency {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  feeStructure Json
+  createdAt    DateTime @default(now())
+  deals        Deal[]
 }
 
 model Deal {
   id                Int        @id @default(autoincrement())
   influencer        Influencer @relation(fields: [influencerId], references: [id])
   influencerId      Int
+  agency            Agency?    @relation(fields: [agencyId], references: [id])
+  agencyId          Int?
   contractedBy      String
-  agencyName        String?
   pricingType       String
   fixedCost         Float?
   cpm               Float?
@@ -39,6 +47,9 @@ model Deal {
   viewGuarantee     Int?
   viewGuaranteeDays Int?
   postDate          DateTime
+  totalSpend        Float
+  status            String     @default("active")
+  numberOfVideos    Int
   videos            Video[]
 }
 
@@ -46,21 +57,25 @@ model Video {
   id           Int         @id @default(autoincrement())
   youtubeId    String      @unique
   title        String
-  views        Int?
-  likes        Int?
-  comments     Int?
+  trackingUrl  String
+  videoLink    String
   influencer   Influencer  @relation(fields: [influencerId], references: [id])
   influencerId Int
   deal         Deal?       @relation(fields: [dealId], references: [id])
   dealId       Int?
   postDate     DateTime
+  couponCode   String?
+  dailyMetrics DailyVideoMetric[]
 }
 
-model Click {
-  id           Int        @id @default(autoincrement())
-  influencer   Influencer @relation(fields: [influencerId], references: [id])
-  influencerId Int
-  timestamp    DateTime   @default(now())
-  ipAddress    String?
-  userAgent    String?
+model DailyVideoMetric {
+  id          Int      @id @default(autoincrement())
+  videoId     Int
+  video       Video    @relation(fields: [videoId], references: [id])
+  date        DateTime
+  views       Int
+  clicks      Int
+  conversions Int      @default(0)
+
+  @@unique([videoId, date])
 }

@@ -1,69 +1,73 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { openDb, closeDb } from '../../db'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    const db = await openDb();
-
     if (req.method === 'GET') {
         try {
-            const deals = await db.all(`
-                SELECT d.*, i.channelName, i.channelYoutubeId
-                FROM deals d
-                LEFT JOIN influencers i ON d.influencerId = i.id
-            `);
-
-            // Fetch videos for each deal
-            for (let deal of deals) {
-                const videos = await db.all('SELECT * FROM videos WHERE dealId = ?', deal.id);
-                deal.videos = videos;
-            }
+            const deals = await prisma.deal.findMany({
+                include: {
+                    influencer: {
+                        select: {
+                            channelName: true,
+                            channelYoutubeId: true
+                        }
+                    },
+                    videos: true,
+                    agency: true
+                }
+            });
 
             res.status(200).json(deals);
         } catch (error) {
             console.error('Error fetching deals:', error);
             res.status(500).json({ message: 'Error fetching deals', error: (error as Error).message });
-        } finally {
-            await closeDb();
         }
     } else if (req.method === 'POST') {
         try {
             const {
                 influencerId,
-                status,
-                uploadMonth,
-                deliverables,
-                usage,
-                recut,
-                exclusivity,
-                viewGuaranteeAmount,
-                viewGuaranteeDays,
-                rate,
-                postDate,
-                uploadLink,
-                trackingUrl,
+                agencyId,
                 contractedBy,
-                agencyName
+                pricingType,
+                fixedCost,
+                cpm,
+                priceCeiling,
+                viewGuarantee,
+                viewGuaranteeDays,
+                postDate,
+                totalSpend,
+                agencyFee,
+                status
             } = req.body;
 
-            const result = await db.run(`
-                INSERT INTO deals (
-                    influencerId, status, uploadMonth, deliverables, usage, recut, exclusivity,
-                    viewGuaranteeAmount, viewGuaranteeDays, rate, postDate, uploadLink,
-                    trackingUrl, contractedBy, agencyName
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                influencerId, status, uploadMonth, deliverables, usage, recut, exclusivity,
-                viewGuaranteeAmount, viewGuaranteeDays, rate, postDate, uploadLink,
-                trackingUrl, contractedBy, agencyName
-            ]);
+            const newDeal = await prisma.deal.create({
+                data: {
+                    influencerId: parseInt(influencerId),
+                    agencyId: agencyId ? parseInt(agencyId) : undefined,
+                    contractedBy,
+                    pricingType,
+                    fixedCost: fixedCost ? parseFloat(fixedCost) : null,
+                    cpm: cpm ? parseFloat(cpm) : null,
+                    priceCeiling: priceCeiling ? parseFloat(priceCeiling) : null,
+                    viewGuarantee: viewGuarantee ? parseInt(viewGuarantee) : null,
+                    viewGuaranteeDays: viewGuaranteeDays ? parseInt(viewGuaranteeDays) : null,
+                    postDate: new Date(postDate),
+                    totalSpend: parseFloat(totalSpend),
+                    agencyFee: agencyFee ? parseFloat(agencyFee) : null,
+                    status: status || 'active'
+                },
+                include: {
+                    influencer: true,
+                    agency: true
+                }
+            });
 
-            const newDeal = await db.get('SELECT * FROM deals WHERE id = ?', result.lastID);
             res.status(201).json(newDeal);
         } catch (error) {
             console.error('Error creating deal:', error);
             res.status(500).json({ message: 'Error creating deal', error: (error as Error).message });
-        } finally {
-            await closeDb();
         }
     } else {
         res.setHeader('Allow', ['GET', 'POST']);

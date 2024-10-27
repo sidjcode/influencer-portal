@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { prisma } from '../../db'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
@@ -8,7 +10,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             res.status(200).json(influencers);
         } else if (req.method === 'POST') {
             const newInfluencer = await prisma.influencer.create({
-                data: req.body
+                data: {
+                    channelName: req.body.channelName,
+                    channelYoutubeId: req.body.channelYoutubeId,
+                    category: req.body.category,
+                    avgViews: parseInt(req.body.avgViews),
+                    callRequired: req.body.callRequired === 'true',
+                    callCompleted: req.body.callCompleted === 'true',
+                    engagementRate: parseFloat(req.body.engagementRate),
+                    topCountriesProportion: parseFloat(req.body.topCountriesProportion),
+                    richCountriesFollowers: parseInt(req.body.richCountriesFollowers),
+                    maleFollowers: parseFloat(req.body.maleFollowers),
+                    followerGrowthRate: parseFloat(req.body.followerGrowthRate),
+                    englishSpeakingFollowers: parseInt(req.body.englishSpeakingFollowers),
+                    trackingUrl: req.body.trackingUrl,
+                }
             });
             res.status(201).json(newInfluencer);
         } else {
