@@ -1,10 +1,14 @@
 import React from 'react'
 import { Navigation } from './Navigation'
+import { useRouter } from 'next/router'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+    const router = useRouter()
+    const isLoginPage = router.pathname === '/login'
+
     return (
         <div className="min-h-screen flex flex-col bg-background text-foreground">
-            <Navigation />
+            {!isLoginPage && <Navigation />}
             <main className="flex-grow container mx-auto py-8">
                 {children}
             </main>

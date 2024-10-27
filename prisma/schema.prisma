@@ -35,6 +35,7 @@ model Agency {
 
 model Deal {
   id                Int        @id @default(autoincrement())
+  name              String     // New field
   influencer        Influencer @relation(fields: [influencerId], references: [id])
   influencerId      Int
   agency            Agency?    @relation(fields: [agencyId], references: [id])
@@ -46,10 +47,10 @@ model Deal {
   priceCeiling      Float?
   viewGuarantee     Int?
   viewGuaranteeDays Int?
-  postDate          DateTime
-  totalSpend        Float
+  totalCost         Float      // Changed from totalSpend
   status            String     @default("active")
   numberOfVideos    Int
+  uploadMonths      String[]   // New field
   videos            Video[]
 }
 

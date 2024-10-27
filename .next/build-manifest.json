@@ -1,46 +1,36 @@
 {
   "polyfillFiles": [
-    "static/chunks/polyfills-42372ed130431b0a.js"
+    "static/chunks/polyfills.js"
   ],
-  "devFiles": [],
+  "devFiles": [
+    "static/chunks/react-refresh.js"
+  ],
   "ampDevFiles": [],
   "lowPriorityFiles": [
-    "static/ahe0K48b3gVIYY7irN6GN/_buildManifest.js",
-    "static/ahe0K48b3gVIYY7irN6GN/_ssgManifest.js"
+    "static/development/_buildManifest.js",
+    "static/development/_ssgManifest.js"
   ],
   "rootMainFiles": [],
   "pages": {
-    "/": [
-      "static/chunks/webpack-880e48e2fc817058.js",
-      "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-3cda6c34556c1bb9.js",
-      "static/chunks/pages/index-400876926f8d2dd0.js"
-    ],
     "/_app": [
-      "static/chunks/webpack-880e48e2fc817058.js",
-      "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-3cda6c34556c1bb9.js",
-      "static/css/627b4b72365c3a37.css",
-      "static/chunks/pages/_app-368774b76200f4bd.js"
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/_app.js"
     ],
     "/_error": [
-      "static/chunks/webpack-880e48e2fc817058.js",
-      "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-3cda6c34556c1bb9.js",
-      "static/chunks/pages/_error-7a92967bea80186d.js"
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/_error.js"
     ],
-    "/influencer-portal": [
-      "static/chunks/webpack-880e48e2fc817058.js",
-      "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-3cda6c34556c1bb9.js",
-      "static/chunks/673-ba6784a2b4354040.js",
-      "static/chunks/pages/influencer-portal-e4a085a98669cde3.js"
+    "/dashboard": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/dashboard.js"
     ],
-    "/influencers": [
-      "static/chunks/webpack-880e48e2fc817058.js",
-      "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-3cda6c34556c1bb9.js",
-      "static/chunks/pages/influencers-9bb55b88d572395a.js"
+    "/deals": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/deals.js"
     ]
   },
   "ampFirstPages": []

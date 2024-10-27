@@ -3,7 +3,7 @@ import { ThemeProvider } from "next-themes"
 import Layout from '@/components/Layout'
 import '../styles/globals.css'
 import { initializeDb } from '../db'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import Login from './login'
 import { useRouter } from 'next/router'
@@ -35,7 +35,7 @@ function AppContent({ Component, pageProps }: AppProps) {
                     <Component {...pageProps} />
                 </Layout>
             ) : (
-                <Login />
+                <Component {...pageProps} />
             )}
         </ThemeProvider>
     )

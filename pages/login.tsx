@@ -32,7 +32,7 @@ export default function Login() {
                             src="/logo.svg"
                             alt="Logo"
                             width={100}
-                            height={100}
+                            height={40}
                         />
                     </div>
                     <CardTitle className="text-2xl font-bold text-center text-primary">Login to Influencer Platform</CardTitle>
