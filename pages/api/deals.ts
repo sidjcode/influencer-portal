@@ -18,16 +18,38 @@ function generateDealName(deal: any, influencer: any, agency: any) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    console.log('Request method:', req.method);
+    console.log('Request query:', req.query);
+
     if (req.method === 'GET') {
         try {
-            const deals = await prisma.deal.findMany({
-                include: {
-                    influencer: true,
-                    agency: true,
-                },
-            })
+            const { influencerId } = req.query
+            console.log('Fetching deals for influencerId:', influencerId);
+
+            let deals;
+            if (influencerId) {
+                deals = await prisma.deal.findMany({
+                    where: {
+                        influencerId: parseInt(influencerId as string)
+                    },
+                    include: {
+                        influencer: true,
+                        agency: true,
+                    },
+                })
+            } else {
+                deals = await prisma.deal.findMany({
+                    include: {
+                        influencer: true,
+                        agency: true,
+                    },
+                })
+            }
+
+            console.log('Fetched deals:', deals);
             res.status(200).json(deals)
         } catch (error) {
+            console.error('Error fetching deals:', error)
             res.status(500).json({message: 'Error fetching deals', error})
         }
     } else if (req.method === 'POST') {
@@ -48,6 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 usage,
                 deliverable,
             } = req.body
+
+            console.log('Creating new deal with data:', req.body);
 
             let totalCost = 0
 
@@ -102,8 +126,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 },
             })
 
+            console.log('Created new deal:', newDeal);
             res.status(201).json(newDeal)
         } catch (error) {
+            console.error('Error creating deal:', error)
             res.status(500).json({message: 'Error creating deal', error})
         }
     } else if (req.method === 'PUT') {
@@ -125,6 +151,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 usage,
                 deliverable,
             } = req.body
+
+            console.log('Updating deal with id:', id);
+            console.log('Update data:', req.body);
 
             let totalCost = 0
 
@@ -180,18 +209,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 },
             })
 
+            console.log('Updated deal:', updatedDeal);
             res.status(200).json(updatedDeal)
         } catch (error) {
+            console.error('Error updating deal:', error)
             res.status(500).json({message: 'Error updating deal', error})
         }
     } else if (req.method === 'DELETE') {
         try {
             const {id} = req.query
+            console.log('Deleting deal with id:', id);
+
             await prisma.deal.delete({
                 where: {id: parseInt(id as string)},
             })
+
+            console.log('Deal deleted successfully');
             res.status(204).end()
         } catch (error) {
+            console.error('Error deleting deal:', error)
             res.status(500).json({message: 'Error deleting deal', error})
         }
     } else {

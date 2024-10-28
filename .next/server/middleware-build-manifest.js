@@ -34,6 +34,11 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/influencers.js"
     ],
+    "/reports": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/reports.js"
+    ],
     "/videos": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",

@@ -41,7 +41,7 @@ interface Deal {
     name: string;
 }
 
-export default function Videos() {
+export default function Component() {
     const [activeForm, setActiveForm] = useState<'add' | 'update'>('add')
     const [videos, setVideos] = useState<Video[]>([])
     const [influencers, setInfluencers] = useState<Influencer[]>([])
@@ -58,8 +58,10 @@ export default function Videos() {
     const [showConfirmation, setShowConfirmation] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [selectedInfluencerId, setSelectedInfluencerId] = useState<number | null>(null)
 
     useEffect(() => {
+        console.log('Component mounted, fetching initial data');
         fetchVideos()
         fetchInfluencers()
         fetchDeals()
@@ -69,6 +71,7 @@ export default function Videos() {
         try {
             const response = await fetch('/api/videos')
             const data = await response.json()
+            console.log('Fetched videos:', data);
             setVideos(data)
         } catch (error) {
             console.error('Error fetching videos:', error)
@@ -84,6 +87,7 @@ export default function Videos() {
         try {
             const response = await fetch('/api/influencers')
             const data = await response.json()
+            console.log('Fetched influencers:', data);
             setInfluencers(data)
         } catch (error) {
             console.error('Error fetching influencers:', error)
@@ -95,10 +99,14 @@ export default function Videos() {
         }
     }
 
-    const fetchDeals = async () => {
+    const fetchDeals = async (influencerId?: number) => {
+        console.log('Fetching deals for influencerId:', influencerId);
         try {
-            const response = await fetch('/api/deals')
+            const url = influencerId ? `/api/deals?influencerId=${influencerId}` : '/api/deals'
+            console.log('Fetching deals from URL:', url);
+            const response = await fetch(url)
             const data = await response.json()
+            console.log('Fetched deals:', data);
             setDeals(data)
         } catch (error) {
             console.error('Error fetching deals:', error)
@@ -112,10 +120,18 @@ export default function Videos() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target
+        console.log('Input changed:', name, value);
         setFormData(prev => ({
             ...prev,
             [name]: value
         }))
+
+        if (name === 'influencerId') {
+            const newInfluencerId = parseInt(value)
+            console.log('New influencer ID selected:', newInfluencerId);
+            setSelectedInfluencerId(newInfluencerId)
+            fetchDeals(newInfluencerId)
+        }
     }
 
     const extractVideoId = (url: string) => {
@@ -140,8 +156,10 @@ export default function Videos() {
                 throw new Error('Failed to fetch video details')
             }
             const data = await response.json()
+            console.log('Fetched video details:', data);
 
             const matchedInfluencer = influencers.find(inf => inf.channelYoutubeId === data.channelId)
+            console.log('Matched influencer:', matchedInfluencer);
 
             setFormData(prev => ({
                 ...prev,
@@ -159,6 +177,7 @@ export default function Videos() {
             }))
 
         } catch (error) {
+            console.error('Error fetching video details:', error);
             setError('Error fetching video details. Please try again.')
         } finally {
             setIsLoading(false)
@@ -171,12 +190,14 @@ export default function Videos() {
         try {
             const url = activeForm === 'add' ? '/api/videos' : `/api/videos/${selectedVideo?.id}`
             const method = activeForm === 'add' ? 'POST' : 'PUT'
+            console.log('Submitting form:', { url, method, formData });
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             })
             if (response.ok) {
+                console.log('Form submitted successfully');
                 toast({
                     title: "Success",
                     description: `Video ${activeForm === 'add' ? 'added' : 'updated'} successfully.`,
@@ -199,8 +220,10 @@ export default function Videos() {
     }
 
     const handleVideoSelect = (videoId: string) => {
+        console.log('Video selected:', videoId);
         const video = videos.find(v => v.id === parseInt(videoId))
         if (video) {
+            console.log('Found video:', video);
             setSelectedVideo(video)
             setFormData(video)
         }
@@ -348,8 +371,12 @@ export default function Videos() {
                                         <Select
                                             name="influencerId"
                                             value={formData.influencerId.toString()}
-                                            onValueChange={(value) => handleInputChange({ target: { name: 'influencerId', value } } as React.ChangeEvent<HTMLSelectElement>)}
+                                            onValueChange={(value) => {
+                                                console.log('Influencer selected:', value);
+                                                handleInputChange({ target: { name: 'influencerId', value } } as React.ChangeEvent<HTMLSelectElement>)
+                                            }}
                                         >
+
                                             <SelectTrigger id="influencerId">
                                                 <SelectValue placeholder="Select an influencer" />
                                             </SelectTrigger>
@@ -372,7 +399,7 @@ export default function Videos() {
                                         <Select
                                             name="dealId"
                                             value={formData.dealId?.toString() || '0'}
-                                            onValueChange={(value)   => handleInputChange({ target: { name: 'dealId', value } } as React.ChangeEvent<HTMLSelectElement>)}
+                                            onValueChange={(value) => handleInputChange({ target: { name: 'dealId', value } } as React.ChangeEvent<HTMLSelectElement>)}
                                         >
                                             <SelectTrigger id="dealId">
                                                 <SelectValue placeholder="Select a deal" />

@@ -1,8 +1,12 @@
+"use client"
+
 import Link from 'next/link'
-import { useRouter } from 'next/router'
+import { usePathname } from 'next/navigation'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 export function Navigation() {
+    const pathname = usePathname()
     const router = useRouter()
 
     const handleLogout = () => {
@@ -13,7 +17,7 @@ export function Navigation() {
     const linkClass = (path: string) =>
         `text-primary hover:text-primary/80 text-sm pb-1 border-b-2 border-transparent 
         hover:border-primary transition-all duration-200 
-        ${router.pathname === path ? "font-semibold border-primary" : ""}`
+        ${pathname === path ? "font-semibold border-primary" : ""}`
 
     return (
         <nav className="bg-muted text-muted-foreground p-3">

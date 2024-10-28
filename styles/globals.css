@@ -90,3 +90,9 @@
         font-family: 'Inter', sans-serif;
     }
 }
+
+@import 'nprogress/nprogress.css';
+
+#nprogress .bar {
+    background: hsl(var(--primary)) !important;
+}
