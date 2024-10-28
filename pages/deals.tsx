@@ -19,7 +19,6 @@ interface Deal {
     priceCeiling?: number | null;
     viewGuarantee?: number | null;
     viewGuaranteeDays?: number | null;
-    totalCost: number;
     status: string;
     numberOfVideos: number;
     uploadMonths: string[];
@@ -46,7 +45,6 @@ export default function Deals() {
         influencerId: 0,
         contractedBy: 'DIRECT',
         pricingType: '',
-        totalCost: 0,
         status: 'active',
         numberOfVideos: 1,
         uploadMonths: [''],
@@ -107,7 +105,7 @@ export default function Deals() {
         const { name, value } = e.target
         setFormData(prev => ({
             ...prev,
-            [name]: ['fixedCost', 'cpm', 'priceCeiling', 'viewGuarantee', 'viewGuaranteeDays', 'totalCost', 'numberOfVideos'].includes(name) ? Number(value) : value
+            [name]: ['fixedCost', 'cpm', 'priceCeiling', 'viewGuarantee', 'viewGuaranteeDays', 'numberOfVideos'].includes(name) ? Number(value) : value
         }))
 
         if (name === 'influencerId' || name === 'numberOfVideos' || name === 'uploadMonths') {
@@ -162,7 +160,6 @@ export default function Deals() {
                     influencerId: 0,
                     contractedBy: 'DIRECT',
                     pricingType: '',
-                    totalCost: 0,
                     status: 'active',
                     numberOfVideos: 1,
                     uploadMonths: [''],
@@ -337,7 +334,7 @@ export default function Deals() {
                                             transition={{ duration: 0.3, delay: 0.2 }}
                                             className="space-y-2"
                                         >
-                                            <Label htmlFor="fixedCost">Fixed Cost</Label>
+                                            <Label htmlFor="fixedCost">Fixed Cost (per video)</Label>
                                             <Input
                                                 id="fixedCost"
                                                 name="fixedCost"
@@ -353,8 +350,7 @@ export default function Deals() {
                                             <motion.div
                                                 initial={{ opacity: 0, y: 20 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.3, delay: 0.2 }}
-
+                                                transition={{ duration:  0.3, delay: 0.2 }}
                                                 className="space-y-2"
                                             >
                                                 <Label htmlFor="cpm">CPM</Label>
@@ -420,22 +416,6 @@ export default function Deals() {
                                         transition={{ duration: 0.3, delay: 0.4 }}
                                         className="space-y-2"
                                     >
-                                        <Label htmlFor="totalCost">Total Cost</Label>
-                                        <Input
-                                            id="totalCost"
-                                            name="totalCost"
-                                            type="number"
-                                            value={formData.totalCost}
-                                            onChange={handleInputChange}
-                                            required
-                                        />
-                                    </motion.div>
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.3, delay: 0.45 }}
-                                        className="space-y-2"
-                                    >
                                         <Label htmlFor="status">Status</Label>
                                         <Select name="status" onValueChange={(value) => handleInputChange({ target: { name: 'status', value } } as React.ChangeEvent<HTMLSelectElement>)}>
                                             <SelectTrigger id="status">
@@ -451,42 +431,43 @@ export default function Deals() {
                                     <motion.div
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.3, delay: 0.5 }}
-                                        className="space-y-2"
+                                        transition={{ duration: 0.3, delay: 0.45 }}
+                                        className="space-y-2 col-span-2"
                                     >
-                                        <Label htmlFor="numberOfVideos">Number of Videos</Label>
-                                        <Input
-                                            id="numberOfVideos"
-                                            name="numberOfVideos"
-                                            type="number"
-                                            value={formData.numberOfVideos}
-                                            onChange={handleNumberOfVideosChange}
-                                            required
-                                            min={1}
-                                        />
+                                        <Label>Number of Videos and Upload Months</Label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Input
+                                                    id="numberOfVideos"
+                                                    name="numberOfVideos"
+                                                    type="number"
+                                                    value={formData.numberOfVideos}
+                                                    onChange={handleNumberOfVideosChange}
+                                                    required
+                                                    min={1}
+                                                    placeholder="Number of Videos"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                {formData.uploadMonths.map((month, index) => (
+                                                    <Input
+                                                        key={index}
+                                                        type="month"
+                                                        value={month}
+                                                        onChange={(e) => handleUploadMonthChange(index, e.target.value)}
+                                                        required
+                                                        placeholder={`Upload Month ${index + 1}`}
+                                                        className="mb-2"
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
                                     </motion.div>
                                 </div>
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3, delay: 0.55 }}
-                                    className="space-y-2"
-                                >
-                                    <Label>Upload Months</Label>
-                                    {formData.uploadMonths.map((month, index) => (
-                                        <Input
-                                            key={index}
-                                            type="month"
-                                            value={month}
-                                            onChange={(e) => handleUploadMonthChange(index, e.target.value)}
-                                            required
-                                        />
-                                    ))}
-                                </motion.div>
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3, delay: 0.6 }}
+                                    transition={{ duration: 0.3, delay: 0.5 }}
                                 >
                                     <Button type="submit" className="w-full">
                                         {activeForm === 'add' ? 'Add Deal' : 'Update Deal'}

@@ -134,34 +134,26 @@ export default function Videos() {
             return
         }
 
-        const apiKey = 'AIzaSyC0_jtfwNbOqzMuoYfrW_EL1iBULzks2Ag' // Replace with your actual API key
-        const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${apiKey}`
-
         try {
-            const response = await fetch(apiUrl)
+            const response = await fetch(`/api/googledata?videoId=${videoId}`)
+            if (!response.ok) {
+                throw new Error('Failed to fetch video details')
+            }
             const data = await response.json()
 
-            if (!data.items || data.items.length === 0) {
-                throw new Error('Video not found')
-            }
-
-            const videoData = data.items[0]
-            const snippet = videoData.snippet
-            const statistics = videoData.statistics
-
-            const matchedInfluencer = influencers.find(inf => inf.channelYoutubeId === snippet.channelId)
+            const matchedInfluencer = influencers.find(inf => inf.channelYoutubeId === data.channelId)
 
             setFormData(prev => ({
                 ...prev,
                 youtubeId: videoId,
-                title: snippet.title,
-                channelTitle: snippet.channelTitle,
-                channelId: snippet.channelId,
-                postDate: new Date(snippet.publishedAt).toISOString().split('T')[0],
-                thumbnail: snippet.thumbnails.high.url,
-                viewCount: statistics.viewCount,
-                likeCount: statistics.likeCount,
-                commentCount: statistics.commentCount,
+                title: data.title,
+                channelTitle: data.channelTitle,
+                channelId: data.channelId,
+                postDate: new Date(data.postDate).toISOString().split('T')[0],
+                thumbnail: data.thumbnail,
+                viewCount: data.viewCount,
+                likeCount: data.likeCount,
+                commentCount: data.commentCount,
                 influencerId: matchedInfluencer ? matchedInfluencer.id : prev.influencerId,
                 influencerName: matchedInfluencer ? matchedInfluencer.channelName : undefined
             }))

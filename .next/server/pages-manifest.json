@@ -3,11 +3,12 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/videos": "pages/videos.js",
-  "/api/influencers": "pages/api/influencers.js",
-  "/": "pages/index.js",
   "/dashboard": "pages/dashboard.js",
+  "/api/googledata": "pages/api/googledata.js",
+  "/api/videos": "pages/api/videos.js",
+  "/api/agencies": "pages/api/agencies.js",
   "/deals": "pages/deals.js",
-  "/influencers": "pages/influencers.js",
   "/api/deals": "pages/api/deals.js",
-  "/api/videos": "pages/api/videos.js"
+  "/api/influencers": "pages/api/influencers.js",
+  "/influencers": "pages/influencers.js"
 }
