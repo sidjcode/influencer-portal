@@ -22,6 +22,8 @@ interface Deal {
     status: string;
     numberOfVideos: number;
     uploadMonths: string[];
+    usage: string;
+    deliverable: string;
 }
 
 interface Influencer {
@@ -33,6 +35,13 @@ interface Agency {
     id: number;
     name: string;
 }
+
+const usageOptions = ['none', '1 month', '2 months', '3 months'];
+const deliverableOptions = [
+    '2-3 minutes', 'Dedicated Video', '60sec', '3-minute', '90sec',
+    '2-minute postroll', '2-minute', '60-90 sec', 'Make Good',
+    '3 - 4 minutes', '30sec', '90-120 sec', 'IG Reel'
+];
 
 export default function Deals() {
     const [activeForm, setActiveForm] = useState<'add' | 'update'>('add')
@@ -48,6 +57,8 @@ export default function Deals() {
         status: 'active',
         numberOfVideos: 1,
         uploadMonths: [''],
+        usage: 'none',
+        deliverable: '',
     })
 
     useEffect(() => {
@@ -130,10 +141,18 @@ export default function Deals() {
         updateDealName()
     }
 
+    const handleUsageChange = (value: string) => {
+        setFormData(prev => ({ ...prev, usage: value }))
+    }
+
+    const handleDeliverableChange = (value: string) => {
+        setFormData(prev => ({ ...prev, deliverable: value }))
+    }
+
     const updateDealName = () => {
         const influencer = influencers.find(inf => inf.id === Number(formData.influencerId))
         if (influencer && formData.uploadMonths[0]) {
-            const startMonth = new Date(formData.uploadMonths[0]).toLocaleString('default', { month: 'long', year: 'numeric' })
+            const startMonth = new  Date(formData.uploadMonths[0]).toLocaleString('default', { month: 'long', year: 'numeric' })
             const newName = `${influencer.channelName}: ${formData.numberOfVideos} videos, Starting ${startMonth}`
             setFormData(prev => ({ ...prev, name: newName }))
         }
@@ -163,6 +182,8 @@ export default function Deals() {
                     status: 'active',
                     numberOfVideos: 1,
                     uploadMonths: [''],
+                    usage: 'none',
+                    deliverable: '',
                 })
                 setSelectedDeal(null)
             } else {
@@ -350,7 +371,7 @@ export default function Deals() {
                                             <motion.div
                                                 initial={{ opacity: 0, y: 20 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration:  0.3, delay: 0.2 }}
+                                                transition={{ duration: 0.3, delay: 0.2 }}
                                                 className="space-y-2"
                                             >
                                                 <Label htmlFor="cpm">CPM</Label>
@@ -463,11 +484,51 @@ export default function Deals() {
                                             </div>
                                         </div>
                                     </motion.div>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: 0.5 }}
+                                        className="space-y-2"
+                                    >
+                                        <Label htmlFor="usage">Usage</Label>
+                                        <Select name="usage" onValueChange={handleUsageChange} value={formData.usage}>
+                                            <SelectTrigger id="usage">
+                                                <SelectValue placeholder="Select usage" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {usageOptions.map((option) => (
+                                                    <SelectItem key={option} value={option}>
+                                                        {option}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </motion.div>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: 0.55 }}
+                                        className="space-y-2"
+                                    >
+                                        <Label htmlFor="deliverable">Deliverable</Label>
+                                        <Select name="deliverable" onValueChange={handleDeliverableChange} value={formData.deliverable}>
+                                            <SelectTrigger id="deliverable">
+                                                <SelectValue placeholder="Select deliverable" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {deliverableOptions.map((option) => (
+                                                    <SelectItem key={option} value={option}>
+                                                        {option}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </motion.div>
                                 </div>
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3, delay: 0.5 }}
+                                    transition={{ duration: 0.3, delay: 0.6 }}
                                 >
                                     <Button type="submit" className="w-full">
                                         {activeForm === 'add' ? 'Add Deal' : 'Update Deal'}

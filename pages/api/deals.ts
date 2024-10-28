@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             })
             res.status(200).json(deals)
         } catch (error) {
-            res.status(500).json({ message: 'Error fetching deals', error })
+            res.status(500).json({message: 'Error fetching deals', error})
         }
     } else if (req.method === 'POST') {
         try {
@@ -45,6 +45,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 status,
                 numberOfVideos,
                 uploadMonths,
+                usage,
+                deliverable,
             } = req.body
 
             let totalCost = 0
@@ -61,11 +63,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
 
             const influencer = await prisma.influencer.findUnique({
-                where: { id: parseInt(influencerId) },
+                where: {id: parseInt(influencerId)},
             })
 
             const agency = agencyId ? await prisma.agency.findUnique({
-                where: { id: parseInt(agencyId) },
+                where: {id: parseInt(agencyId)},
             }) : null
 
             const name = generateDealName({
@@ -95,16 +97,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     status,
                     numberOfVideos: parseInt(numberOfVideos),
                     uploadMonths,
+                    usage,
+                    deliverable,
                 },
             })
 
             res.status(201).json(newDeal)
         } catch (error) {
-            res.status(500).json({ message: 'Error creating deal', error })
+            res.status(500).json({message: 'Error creating deal', error})
         }
     } else if (req.method === 'PUT') {
         try {
-            const { id } = req.query
+            const {id} = req.query
             const {
                 influencerId,
                 agencyId,
@@ -118,6 +122,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 status,
                 numberOfVideos,
                 uploadMonths,
+                usage,
+                deliverable,
             } = req.body
 
             let totalCost = 0
@@ -133,13 +139,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 }
             }
 
-
             const influencer = await prisma.influencer.findUnique({
-                where: { id: parseInt(influencerId) },
+                where: {id: parseInt(influencerId)},
             })
 
             const agency = agencyId ? await prisma.agency.findUnique({
-                where: { id: parseInt(agencyId) },
+                where: {id: parseInt(agencyId)},
             }) : null
 
             const name = generateDealName({
@@ -154,7 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }, influencer, agency)
 
             const updatedDeal = await prisma.deal.update({
-                where: { id: parseInt(id as string) },
+                where: {id: parseInt(id as string)},
                 data: {
                     name,
                     influencerId: parseInt(influencerId),
@@ -170,22 +175,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     status,
                     numberOfVideos: parseInt(numberOfVideos),
                     uploadMonths,
+                    usage,
+                    deliverable,
                 },
             })
 
             res.status(200).json(updatedDeal)
         } catch (error) {
-            res.status(500).json({ message: 'Error updating deal', error })
+            res.status(500).json({message: 'Error updating deal', error})
         }
     } else if (req.method === 'DELETE') {
         try {
-            const { id } = req.query
+            const {id} = req.query
             await prisma.deal.delete({
-                where: { id: parseInt(id as string) },
+                where: {id: parseInt(id as string)},
             })
             res.status(204).end()
         } catch (error) {
-            res.status(500).json({ message: 'Error deleting deal', error })
+            res.status(500).json({message: 'Error deleting deal', error})
         }
     } else {
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE'])

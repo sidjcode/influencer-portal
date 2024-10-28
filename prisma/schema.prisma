@@ -15,7 +15,6 @@ model Influencer {
   avgViews                 Int
   engagementRate           Float
   topCountriesProportion   Float
-  richCountriesFollowers   Int
   maleFollowers            Float
   followerGrowthRate       Float
   englishSpeakingFollowers Int
@@ -23,6 +22,23 @@ model Influencer {
   language                 String
   deals                    Deal[]
   videos                   Video[]
+}
+
+enum Category {
+  PRODUCTIVITY_AND_ORGANIZATION
+  TECH_AND_SOFTWARE
+  BUSINESS_AND_ENTREPRENEURSHIP
+  LIFESTYLE_AND_VLOGS
+  HEALTH_AND_WELLNESS
+  EDUCATION_AND_CAREER
+  ARTS_AND_CRAFTS
+  FASHION_AND_BEAUTY
+  TRAVEL_AND_CULTURE
+  HOME_AND_DESIGN
+  FINANCE_AND_INVESTING
+  PHILOSOPHY_AND_PERSONAL_DEVELOPMENT
+  ENTERTAINMENT_AND_MEDIA
+  OTHER
 }
 
 model Agency {
@@ -35,7 +51,7 @@ model Agency {
 
 model Deal {
   id                Int        @id @default(autoincrement())
-  name              String     // New field
+  name              String
   influencer        Influencer @relation(fields: [influencerId], references: [id])
   influencerId      Int
   agency            Agency?    @relation(fields: [agencyId], references: [id])
@@ -47,10 +63,12 @@ model Deal {
   priceCeiling      Float?
   viewGuarantee     Int?
   viewGuaranteeDays Int?
-  totalCost         Float      // Changed from totalSpend
+  totalCost         Float
   status            String     @default("active")
   numberOfVideos    Int
-  uploadMonths      String[]   // New field
+  uploadMonths      String[]
+  usage             String?
+  deliverable       String?    // Changed from deliverables (array) to deliverable (single string)
   videos            Video[]
 }
 

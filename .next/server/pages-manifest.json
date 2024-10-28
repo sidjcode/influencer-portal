@@ -2,13 +2,12 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/videos": "pages/videos.js",
-  "/dashboard": "pages/dashboard.js",
-  "/api/googledata": "pages/api/googledata.js",
-  "/api/videos": "pages/api/videos.js",
-  "/api/agencies": "pages/api/agencies.js",
   "/deals": "pages/deals.js",
+  "/api/videos": "pages/api/videos.js",
+  "/videos": "pages/videos.js",
   "/api/deals": "pages/api/deals.js",
+  "/api/agencies": "pages/api/agencies.js",
   "/api/influencers": "pages/api/influencers.js",
+  "/dashboard": "pages/dashboard.js",
   "/influencers": "pages/influencers.js"
 }
