@@ -454,9 +454,14 @@ export default function Dashboard() {
                                             <TableCell>${video.cost?.toLocaleString()}</TableCell>
                                             <TableCell>{roi}%</TableCell>
                                             <TableCell>
-                                                <Link href={`/videos/${video.id}`} className="flex items-center text-blue-500 hover:text-blue-700">
-                                                    View <ExternalLink className="ml-1 h-4 w-4" />
-                                                </Link>
+                                                <a
+                                                    href={`https://www.youtube.com/watch?v=${video.youtubeId}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center text-blue-500 hover:text-blue-700"
+                                                >
+                                                    View <ExternalLink className="ml-1 h-4 w-4"/>
+                                                </a>
                                             </TableCell>
                                         </TableRow>
                                     )
