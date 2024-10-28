@@ -197,11 +197,11 @@ export default function Dashboard() {
     const chartConfig = {
         videoCount: {
             label: "Videos Posted",
-            color: "hsl(var(--chart-1))",
+            color: "hsl(262, 83%, 58%)", // Purple color
         },
         views: {
             label: "Views",
-            color: "hsl(var(--chart-2))",
+            color: "hsl(214, 82%, 51%)", // Blue color
         },
     }
 
@@ -360,7 +360,7 @@ export default function Dashboard() {
                                             />
                                         }
                                     />
-                                    <Bar dataKey={activeChart} fill={`var(--color-${activeChart})`} />
+                                    <Bar dataKey={activeChart} fill={chartConfig[activeChart].color} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </ChartContainer>
