@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 import { Suspense } from 'react'
-import { Navigation } from '@/components/navigation'
+import { Navigation } from '@/components/Navigation'
 import LoadingIndicator from '@/components/loading-indicator'
 import NavigationProgress from '@/components/navigation-progress'
 
