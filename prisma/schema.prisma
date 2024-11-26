@@ -68,7 +68,7 @@ model Deal {
   numberOfVideos    Int
   uploadMonths      String[]
   usage             String?
-  deliverable       String?    // Changed from deliverables (array) to deliverable (single string)
+  deliverable       String?
   videos            Video[]
 }
 
@@ -85,15 +85,17 @@ model Video {
   postDate      DateTime
   couponCode    String?
   channelTitle  String?
+  channelId     String? // Added channelId field
   thumbnail     String?
   viewCount     Int?
   likeCount     Int?
   commentCount  Int?
+  cost          Float              @default(0) // Added cost field
+  clicks        Int                @default(0)
   dailyMetrics  DailyVideoMetric[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }
-
 
 model DailyVideoMetric {
   id          Int      @id @default(autoincrement())

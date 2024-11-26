@@ -53,21 +53,6 @@ export function Navigation() {
                         </Link>
                     </li>
                     <li>
-                        <Link href="/agencies" className={linkClass("/agencies")}>
-                            Agencies
-                        </Link>
-                    </li>
-                    <li>
-                        <Link href="/reports" className={linkClass("/reports")}>
-                            Reports
-                        </Link>
-                    </li>
-                    <li>
-                        <Link href="/calendar" className={linkClass("/calendar")}>
-                            Calendar
-                        </Link>
-                    </li>
-                    <li>
                         <button
                             onClick={handleLogout}
                             className="text-secondary hover:text-secondary/80 text-sm pb-1 border-b-2 border-transparent

@@ -1,17 +1,26 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Users, DollarSign, MousePointer, ShoppingCart, Percent, Video, ExternalLink, ArrowUpDown } from "lucide-react"
+import { Users, DollarSign, MousePointer, ShoppingCart, Percent, Video, ExternalLink, ArrowUpDown, RefreshCw } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useCountUp } from '@/hooks/useCountUp'
 import { toast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import Image from 'next/image'
-import Link from 'next/link'
 import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 
 interface CurrentMonthData {
     postedVideos: number;
@@ -61,43 +70,45 @@ export default function Dashboard() {
     const [sortColumn, setSortColumn] = useState<keyof Video>('postDate')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
     const [activeChart, setActiveChart] = useState<'videoCount' | 'views'>('videoCount')
+    const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7))
+    const [updatingVideoId, setUpdatingVideoId] = useState<number | null>(null)
+    const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false)
+    const [isRefreshing, setIsRefreshing] = useState(false)
+    const { toast } = useToast()
 
-    useEffect(() => {
-        fetchDashboardData()
-    }, [])
-
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async (selectedMonth: string) => {
         setIsLoading(true)
         setError(null)
         try {
-            const currentDate = new Date()
-            const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-            const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const firstDayOfMonth = new Date(year, month - 1, 1);
+            const lastDayOfMonth = new Date(year, month, 0);
 
-            // Fetch videos for the current month
             const videosResponse = await fetch(`/api/videos?startDate=${firstDayOfMonth.toISOString()}&endDate=${lastDayOfMonth.toISOString()}`)
             if (!videosResponse.ok) {
                 throw new Error(`HTTP error! status: ${videosResponse.status}`)
             }
             const videos: Video[] = await videosResponse.json()
 
-            // Calculate metrics
-            const postedVideos = videos.length
-            const totalViews = videos.reduce((sum, video) => sum + (video.viewCount || 0), 0)
-            const totalClicks = videos.reduce((sum, video) => sum + (video.clicks || 0), 0)
-            const totalConversions = videos.reduce((sum, video) => sum + (video.conversions || 0), 0)
-            const cost = videos.reduce((sum, video) => sum + (video.cost || 0), 0)
-            const roi = cost > 0 ? ((totalConversions * 150 / cost) * 100).toFixed(2) : '0'
+            const filteredVideos = videos.filter(video => {
+                const videoDate = new Date(video.postDate)
+                return videoDate >= firstDayOfMonth && videoDate <= lastDayOfMonth
+            })
 
-            // Calculate daily post data
+            const postedVideos = filteredVideos.length
+            const totalViews = filteredVideos.reduce((sum, video) => sum + (video.viewCount || 0), 0)
+            const totalClicks = filteredVideos.reduce((sum, video) => sum + (video.clicks || 0), 0)
+            const totalConversions = Math.round(totalClicks * 0.075) // 7.5% of clicks convert
+            const cost = filteredVideos.reduce((sum, video) => sum + (video.cost || 0), 0)
+            const roi = cost > 0 ? ((totalConversions * 120 / cost) * 100).toFixed(2) : '0'
+
             const dailyData: { [key: string]: { count: number, views: number } } = {}
-            for (let i = 1; i <= 31; i++) {
-                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), i)
-                if (date > currentDate) break
+            for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+                const date = new Date(year, month - 1, i)
                 const dateString = date.toISOString().split('T')[0]
                 dailyData[dateString] = { count: 0, views: 0 }
             }
-            videos.forEach(video => {
+            filteredVideos.forEach(video => {
                 const date = new Date(video.postDate).toISOString().split('T')[0]
                 if (dailyData[date]) {
                     dailyData[date].count++
@@ -117,9 +128,9 @@ export default function Dashboard() {
                 totalConversions,
                 roi: parseFloat(roi),
                 cost,
-                agencyFee: 0 // You may want to calculate this separately
+                agencyFee: 0
             })
-            setAllVideos(videos)
+            setAllVideos(filteredVideos)
             setDailyPostData(dailyPostData)
         } catch (error) {
             console.error('Error fetching dashboard data:', error)
@@ -132,7 +143,11 @@ export default function Dashboard() {
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [toast])
+
+    useEffect(() => {
+        fetchDashboardData(selectedMonth)
+    }, [selectedMonth, fetchDashboardData])
 
     const sortedVideos = useMemo(() => {
         return [...allVideos].sort((a, b) => {
@@ -170,6 +185,111 @@ export default function Dashboard() {
         }
     }
 
+    const handleUpdateVideo = async (videoId: number) => {
+        setUpdatingVideoId(videoId)
+        setIsUpdateDialogOpen(true)
+        try {
+            const response = await fetch(`/api/updateclicks?id=${videoId}`, { method: 'POST' })
+            if (!response.ok) {
+                throw new Error('Failed to update video data')
+            }
+            const updatedVideo: Video = await response.json()
+            setAllVideos(prevVideos => prevVideos.map(video => video.id === updatedVideo.id ? updatedVideo : video))
+            toast({
+                title: "Video Updated",
+                description: "The video data has been successfully updated.",
+            })
+        } catch (error) {
+            console.error('Error updating video:', error)
+            toast({
+                title: "Update Failed",
+                description: "Failed to update the video data. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setUpdatingVideoId(null)
+            setIsUpdateDialogOpen(false)
+        }
+    }
+
+    const handleRefreshNumbers = async () => {
+        setIsRefreshing(true);
+        try {
+            const updatedVideos = await Promise.all(allVideos.map(async (video) => {
+                const response = await fetch(`/api/googledata?videoId=${video.youtubeId}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch data for video ${video.youtubeId}`);
+                }
+                return await response.json();
+            }));
+
+            const updateResponse = await fetch('/api/updateVideoMetrics', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ videos: updatedVideos }),
+            });
+
+            if (!updateResponse.ok) {
+                throw new Error('Failed to update video metrics in the database');
+            }
+
+            const updatedVideosFromDB = await updateResponse.json();
+
+            setAllVideos(updatedVideosFromDB);
+
+            // Recalculate dailyPostData
+            const newDailyData: { [key: string]: { count: number, views: number } } = {};
+            updatedVideosFromDB.forEach((video: Video) => {
+                const date = new Date(video.postDate).toISOString().split('T')[0];
+                if (!newDailyData[date]) {
+                    newDailyData[date] = { count: 0, views: 0 };
+                }
+                newDailyData[date].count++;
+                newDailyData[date].views += video.viewCount || 0;
+            });
+
+            const newDailyPostData = Object.entries(newDailyData).map(([date, data]) => ({
+                date,
+                videoCount: data.count,
+                views: data.views
+            })).sort((a, b) => a.date.localeCompare(b.date));
+
+            setDailyPostData(newDailyPostData);
+
+            // Update currentMonthData
+            const totalViews = updatedVideosFromDB.reduce((sum: number, video: Video) => sum + (video.viewCount || 0), 0);
+            const totalClicks = updatedVideosFromDB.reduce((sum: number, video: Video) => sum + (video.clicks || 0), 0);
+            const totalConversions = Math.round(totalClicks * 0.075);
+            const cost = updatedVideosFromDB.reduce((sum: number, video: Video) => sum + (video.cost || 0), 0);
+            const roi = cost > 0 ? ((totalConversions * 120 / cost) * 100).toFixed(2) : '0';
+
+            setCurrentMonthData(prevData => ({
+                ...prevData!,
+                totalViews,
+                totalClicks,
+                totalConversions,
+                roi: parseFloat(roi),
+                cost,
+            }));
+
+            toast({
+                title: "Metrics Updated",
+                description: "Video metrics have been successfully refreshed from YouTube and updated in the database.",
+            });
+        } catch (error) {
+            console.error('Error refreshing numbers:', error);
+            toast({
+                title: "Refresh Failed",
+                description: "Failed to refresh the video metrics. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     if (isLoading) {
         return <div className="flex justify-center items-center h-screen">Loading...</div>
     }
@@ -182,26 +302,25 @@ export default function Dashboard() {
         return <div className="flex justify-center items-center h-screen">No data available</div>
     }
 
-    // Calculate totals for the summary row
     const totalVideos = allVideos.length
     const totalViews = allVideos.reduce((sum, video) => sum + (video.viewCount || 0), 0)
     const totalLikes = allVideos.reduce((sum, video) => sum + (video.likeCount || 0), 0)
     const totalComments = allVideos.reduce((sum, video) => sum + (video.commentCount || 0), 0)
     const totalClicks = allVideos.reduce((sum, video) => sum + (video.clicks || 0), 0)
-    const totalConversions = allVideos.reduce((sum, video) => sum + (video.conversions || 0), 0)
+    const totalConversions = Math.round(totalClicks * 0.075)
     const totalCost = allVideos.reduce((sum, video) => sum + (video.cost || 0), 0)
     const netEngagementRate = totalViews > 0 ? ((totalLikes + totalComments) / totalViews * 100).toFixed(2) : '0.00'
     const totalCTR = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(2) : '0.00'
-    const netROI = totalCost > 0 ? (((totalConversions * 150) / totalCost) * 100).toFixed(2) : '0.00'
+    const netROI = totalCost > 0 ? (((totalConversions * 120) / totalCost) * 100).toFixed(2) : '0.00'
 
     const chartConfig = {
         videoCount: {
             label: "Videos Posted",
-            color: "hsl(262, 83%, 58%)", // Purple color
+            color: "hsl(262, 83%, 58%)",
         },
         views: {
             label: "Views",
-            color: "hsl(214, 82%, 51%)", // Blue color
+            color: "hsl(214, 82%, 51%)",
         },
     }
 
@@ -212,8 +331,51 @@ export default function Dashboard() {
             animate="visible"
             variants={containerVariants}
         >
-            <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-            <h2 className="text-2xl font-bold mb-4">Current Month Performance</h2>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">Dashboard</h1>
+                <Button
+                    onClick={handleRefreshNumbers}
+                    disabled={isRefreshing}
+                >
+                    {isRefreshing ? (
+                        <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Refreshing...
+                        </>
+                    ) : (
+                        <>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Refresh Metrics
+                        </>
+                    )}
+                </Button>
+            </div>
+            <div className="mb-6">
+                <Label htmlFor="month-select" className="text-lg font-semibold mb-2 block">
+                    Select Month
+                </Label>
+                <Select
+                    value={selectedMonth}
+                    onValueChange={(value) => setSelectedMonth(value)}
+                >
+                    <SelectTrigger id="month-select" className="w-[200px]">
+                        <SelectValue placeholder="Select month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => {
+                            const date = new Date(new Date().getFullYear(), i, 1)
+                            return (
+                                <SelectItem key={i} value={date.toISOString().slice(0, 7)}>
+                                    {date.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </SelectItem>
+                            )
+                        })}
+                    </SelectContent>
+                </Select>
+            </div>
+            <h2 className="text-2xl font-bold mb-4">
+                Performance for {new Date(selectedMonth).toLocaleString('default', { month: 'long', year: 'numeric' })}
+            </h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
                 <motion.div variants={itemVariants}>
                     <Card>
@@ -301,7 +463,7 @@ export default function Dashboard() {
                         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
                             <CardTitle>Daily Video Performance</CardTitle>
                             <CardDescription>
-                                Showing videos posted and views for the current month
+                                Showing videos posted and views for {new Date(selectedMonth).toLocaleString('default', { month: 'long', year: 'numeric' })}
                             </CardDescription>
                         </div>
                         <div className="flex">
@@ -312,17 +474,17 @@ export default function Dashboard() {
                                     className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left even:border-l data-[active=true]:bg-muted/50 sm:border-l sm:border-t-0 sm:px-8 sm:py-6"
                                     onClick={() => setActiveChart(key)}
                                 >
-                  <span className="text-xs text-muted-foreground">
-                    {chartConfig[key].label}
-                  </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {chartConfig[key].label}
+                                    </span>
                                     <span className="text-lg font-bold leading-none sm:text-3xl">
-                    {dailyPostData.reduce((acc, curr) => acc + curr[key], 0).toLocaleString()}
-                  </span>
+                                        {dailyPostData.reduce((acc, curr) => acc + curr[key], 0).toLocaleString()}
+                                    </span>
                                 </button>
                             ))}
                         </div>
                     </CardHeader>
-                    <CardContent className="px-2  sm:p-6">
+                    <CardContent className="px-2 sm:p-6">
                         <ChartContainer
                             config={chartConfig}
                             className="aspect-auto h-[250px] w-full"
@@ -422,6 +584,7 @@ export default function Dashboard() {
                             </TableHeader>
                             <TableBody>
                                 {sortedVideos.map((video) => {
+                                    const conversions = Math.round(video.clicks * 0.075)
                                     const engagementRate = video.viewCount > 0
                                         ? ((video.likeCount + video.commentCount) / video.viewCount * 100).toFixed(2)
                                         : '0.00'
@@ -429,7 +592,7 @@ export default function Dashboard() {
                                         ? ((video.clicks / video.viewCount) * 100).toFixed(2)
                                         : '0.00'
                                     const roi = video.cost > 0
-                                        ? (((video.conversions * 150) / video.cost) * 100).toFixed(2)
+                                        ? (((conversions * 120) / video.cost) * 100).toFixed(2)
                                         : '0.00'
                                     return (
                                         <TableRow key={video.id}>
@@ -443,14 +606,14 @@ export default function Dashboard() {
                                                 />
                                             </TableCell>
                                             <TableCell className="max-w-xs truncate">{video.title}</TableCell>
-                                            <TableCell>{video.influencer.channelName}</TableCell>
+                                            <TableCell>{video.influencer?.channelName || 'N/A'}</TableCell>
                                             <TableCell>{video.viewCount?.toLocaleString()}</TableCell>
                                             <TableCell>{video.likeCount?.toLocaleString()}</TableCell>
                                             <TableCell>{video.commentCount?.toLocaleString()}</TableCell>
                                             <TableCell>{engagementRate}%</TableCell>
                                             <TableCell>{video.clicks?.toLocaleString()}</TableCell>
                                             <TableCell>{ctr}%</TableCell>
-                                            <TableCell>{video.conversions?.toLocaleString()}</TableCell>
+                                            <TableCell>{conversions?.toLocaleString()}</TableCell>
                                             <TableCell>${video.cost?.toLocaleString()}</TableCell>
                                             <TableCell>{roi}%</TableCell>
                                             <TableCell>
@@ -485,6 +648,16 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
             </motion.div>
+            <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Updating Video Data</DialogTitle>
+                        <DialogDescription>
+                            We're fetching the latest data from YouTube and Bitly. This may take a moment.
+                        </DialogDescription>
+                    </DialogHeader>
+                </DialogContent>
+            </Dialog>
         </motion.div>
     )
 }

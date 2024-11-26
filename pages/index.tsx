@@ -7,9 +7,6 @@ export default function Home() {
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-4">Welcome to Influencer Portal</h1>
             <p className="mb-4">Manage your influencers and campaigns efficiently.</p>
-            <Link href="/influencer-portal">
-                <Button>Go to Influencer Portal</Button>
-            </Link>
         </div>
     )
 }

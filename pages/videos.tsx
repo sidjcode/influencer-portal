@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
+import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import Image from "next/image"
 
 interface Video {
@@ -28,6 +28,8 @@ interface Video {
     viewCount?: string;
     likeCount?: string;
     commentCount?: string;
+    cost: number;
+    clicks: number;
 }
 
 interface Influencer {
@@ -54,6 +56,8 @@ export default function Component() {
         videoLink: '',
         influencerId: 0,
         postDate: '',
+        cost: 0,
+        clicks: 0,
     })
     const [showConfirmation, setShowConfirmation] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
@@ -123,7 +127,7 @@ export default function Component() {
         console.log('Input changed:', name, value);
         setFormData(prev => ({
             ...prev,
-            [name]: value
+            [name]: name === 'cost' || name === 'clicks' ? parseFloat(value) : value
         }))
 
         if (name === 'influencerId') {
@@ -187,8 +191,9 @@ export default function Component() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
+        setError(null)
         try {
-            const url = activeForm === 'add' ? '/api/videos' : `/api/videos/${selectedVideo?.id}`
+            const url = '/api/videos'
             const method = activeForm === 'add' ? 'POST' : 'PUT'
             console.log('Submitting form:', { url, method, formData });
             const response = await fetch(url, {
@@ -196,22 +201,25 @@ export default function Component() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             })
-            if (response.ok) {
-                console.log('Form submitted successfully');
-                toast({
-                    title: "Success",
-                    description: `Video ${activeForm === 'add' ? 'added' : 'updated'} successfully.`,
-                })
-                fetchVideos()
-                setShowConfirmation(true)
-            } else {
-                throw new Error(`Failed to ${activeForm} video`)
+            const data = await response.json()
+            if (!response.ok) {
+                console.error('Server response:', data);
+                throw new Error(data.message || `Failed to ${activeForm} video`)
             }
+            console.log(`Video ${activeForm === 'add' ? 'added' : 'updated'} successfully:`, data);
+            toast({
+                title: "Success",
+                description: `Video ${activeForm === 'add' ? 'added' : 'updated'} successfully.`,
+            })
+            fetchVideos()
+            setShowConfirmation(true)
         } catch (error) {
             console.error(`Error ${activeForm}ing video:`, error)
+            const errorMessage = error instanceof Error ? error.message : `Failed to ${activeForm} video. Please try again.`
+            setError(errorMessage)
             toast({
                 title: "Error",
-                description: `Failed to ${activeForm} video. Please try again.`,
+                description: errorMessage,
                 variant: "destructive",
             })
         } finally {
@@ -225,7 +233,10 @@ export default function Component() {
         if (video) {
             console.log('Found video:', video);
             setSelectedVideo(video)
-            setFormData(video)
+            setFormData({
+                ...video,
+                id: video.id
+            })
         }
     }
 
@@ -376,7 +387,6 @@ export default function Component() {
                                                 handleInputChange({ target: { name: 'influencerId', value } } as React.ChangeEvent<HTMLSelectElement>)
                                             }}
                                         >
-
                                             <SelectTrigger id="influencerId">
                                                 <SelectValue placeholder="Select an influencer" />
                                             </SelectTrigger>
@@ -489,6 +499,39 @@ export default function Component() {
                                             readOnly
                                         />
                                     </motion.div>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: 0.5 }}
+                                        className="space-y-2"
+                                    >
+                                        <Label htmlFor="cost">Cost ($)</Label>
+                                        <Input
+                                            id="cost"
+                                            name="cost"
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.cost}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                    </motion.div>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: 0.55 }}
+                                        className="space-y-2"
+                                    >
+                                        <Label htmlFor="clicks">Clicks</Label>
+                                        <Input
+                                            id="clicks"
+                                            name="clicks"
+                                            type="number"
+                                            value={formData.clicks}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                    </motion.div>
                                 </div>
                                 {error && (
                                     <Alert variant="destructive">
@@ -500,7 +543,7 @@ export default function Component() {
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3, delay: 0.5 }}
+                                    transition={{ duration: 0.3, delay: 0.6 }}
                                 >
                                     <Button type="submit" className="w-full" disabled={isLoading}>
                                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -540,6 +583,8 @@ export default function Component() {
                                 <p><strong>Views:</strong> {formData.viewCount || 'N/A'}</p>
                                 <p><strong>Likes:</strong> {formData.likeCount || 'N/A'}</p>
                                 <p><strong>Comments:</strong> {formData.commentCount || 'N/A'}</p>
+                                <p><strong>Cost:</strong> ${formData.cost}</p>
+                                <p><strong>Clicks:</strong> {formData.clicks}</p>
                             </div>
                         </div>
                     )}
